@@ -1,0 +1,92 @@
+package multi_pong;
+
+enum Direction {
+    STOP = 0;
+    UP = 1;
+    DOWN = 2;
+}
+
+message Player {
+    enum Identifier {
+        PLAYER_1 = 0;
+        PLAYER_2 = 1;
+    }
+
+    required Identifier identifier = 1;
+    required Direction paddle_direction = 2 [default = STOP];
+    required float paddle_location = 3 [default = 0.5];
+    required uint32 score = 4 [default = 0];
+}
+
+message Ball {
+    optional string token = 1;
+    required float x = 2;
+    required float y = 3;
+}
+
+message State {
+    required string token = 1;
+    required Ball ball = 2;
+    required Player player_1 = 3;
+    required Player player_2 = 4;
+    required uint32 frame = 5;
+}
+
+message Movement {
+    required string token = 1;
+    required Direction direction = 2;
+}
+
+message Trust {
+    required string secret = 1;
+}
+
+message Query {}
+
+message Status {
+    enum Phase {
+        WAITING = 0;
+        PREPARING = 1;
+        STARTED = 2;
+    }
+
+    required Phase phase = 1;
+}
+
+message Prepare {
+    required string secret = 1;
+}
+
+message Tokens {
+    required string token_1 = 1;
+    required string token_2 = 2;
+}
+
+message Search {}
+
+message Match {
+    required string token = 1;
+    required string host = 2;
+    required uint32 port = 3;
+    required Player player = 4;
+}
+
+message Join {
+    required string token = 1;
+}
+
+message Message {
+    oneof content {
+        Ball ball = 1;
+        Movement movement = 2;
+        Trust trust = 3;
+        Query query = 4;
+        Status status = 5;
+        Prepare prepare = 6;
+        Tokens tokens = 7;
+        Search search = 8;
+        Match match = 9;
+        Join join = 10;
+        State state = 11;
+    }
+}

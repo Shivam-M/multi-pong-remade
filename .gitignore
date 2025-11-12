@@ -1,0 +1,7 @@
+*.o
+*.so
+.vs/
+.vscode/
+__pycache__/
+*/protobufs/*
+!*/protobufs/.gitkeep
