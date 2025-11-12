@@ -1,3 +1,6 @@
+*.exe
+*.pdb
+*.obj
 *.o
 *.so
 .vs/
@@ -5,3 +8,11 @@
 __pycache__/
 */protobufs/*
 !*/protobufs/.gitkeep
+
+build/
+CMakeFiles/
+CMakeCache.txt
+CMakeSettings.json
+
+vcpkg_installed/
+vcpkg-configuration.json
