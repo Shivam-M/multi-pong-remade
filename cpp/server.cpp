@@ -146,17 +146,11 @@ void Server::start_match() {
 }
 
 void Server::game_loop() {
-    Logger::info("Entered game loop");
     const float paddle_speed = 0.02f;
     const float ball_speed_increment = 0.0005f;
-    constexpr float INITIAL_BALL_VELOCITY = 0.0025f;
     Ball* ball = state.mutable_ball();
-
-    ball_velocity[0] = (std::rand() % 2 ? -1 : 1) * INITIAL_BALL_VELOCITY;
-    ball_velocity[1] = (std::rand() % 2 ? -1 : 1) * INITIAL_BALL_VELOCITY;
-
-    ball->set_x(0.5f);
-    ball->set_y(0.5f);
+    
+    reset_ball();
 
     while (status.phase() == Status::STARTED) {
 
@@ -171,9 +165,7 @@ void Server::game_loop() {
             Player::Identifier player_id = ball->x() < 0.0f ? Player::PLAYER_2 : Player::PLAYER_1;
             std::string scoring_token = get_token_by_player_id(player_id);
             clients[scoring_token].set_score(clients[scoring_token].score() + 1);
-            ball->set_x(0.5f);
-            ball->set_y(0.5f);
-            ball_velocity[0] *= -1;
+            reset_ball();
         }
 
         for (auto& [token, player] : clients) {
@@ -194,7 +186,7 @@ void Server::game_loop() {
         float paddle_y = clients[is_ball_on_left_side ? tokens.token_1() : tokens.token_2()].paddle_location();
 
         if (did_ball_hit_paddle(paddle_x, paddle_y, relative_hit)) {
-            ball_velocity[0] *= -1;
+            ball_velocity[0] *= -1 - (MULTI_PONG_PADDLE_HIT_EDGE_FACTOR * abs(relative_hit - 0.5));
         }
 
         state.set_frame(state.frame() + 1);
@@ -202,6 +194,14 @@ void Server::game_loop() {
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000 / 128));
     }
+}
+
+void Server::reset_ball() {
+    constexpr float INITIAL_BALL_VELOCITY = 0.0025f;
+    ball_velocity[0] = (std::rand() % 2 ? -1 : 1) * INITIAL_BALL_VELOCITY;
+    ball_velocity[1] = (std::rand() % 2 ? -1 : 1) * INITIAL_BALL_VELOCITY;
+    state.mutable_ball()->set_x(0.5f);
+    state.mutable_ball()->set_y(0.5f);
 }
 
 bool Server::did_ball_hit_paddle(float paddle_x, float paddle_y, float& relative_hit) {

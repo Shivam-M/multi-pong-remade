@@ -30,6 +30,7 @@ static constexpr float MULTI_PONG_BALL_HEIGHT = 0.015f * (16.0f / 9.0f);
 static constexpr float MULTI_PONG_PADDLE_WIDTH = 0.015f;
 static constexpr float MULTI_PONG_PADDLE_HEIGHT = 0.15f;
 static constexpr float MULTI_PONG_PADDLE_HORIZONTAL_PADDING = 0.1f;
+static constexpr float MULTI_PONG_PADDLE_HIT_EDGE_FACTOR = 0.5f;
 
 
 class Server {
@@ -52,6 +53,7 @@ class Server {
         void handle_movement(const multi_pong::Movement& movement, const sockaddr_in& address);
         void start_match();
         void game_loop();
+        void reset_ball();
         bool did_ball_hit_paddle(float paddle_x, float paddle_y, float& relative_hit);
         void send_state_to_all_players();
 
