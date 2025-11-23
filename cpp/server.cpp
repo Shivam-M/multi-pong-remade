@@ -1,8 +1,8 @@
 #include "server.h"
 #include "logger.h"
 
-#include <errno.h>
 #include <thread>
+#include <cstdlib>
 
 using namespace multi_pong;
 

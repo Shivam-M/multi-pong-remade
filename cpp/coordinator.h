@@ -1,7 +1,5 @@
 #pragma once
 
-#include "logger.h"
-
 #include <protobufs/pong.pb.h>
 #include <string>
 #include <map>
@@ -9,18 +7,6 @@
 #include <deque>
 #include <optional>
 #include <utility>
-#include <thread>
-
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#else
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
 
 
 static constexpr int MULTI_PONG_COORDINATOR_PORT = 4999;

@@ -3,7 +3,15 @@
 
 #include <thread>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+#else
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #include <errno.h>
 #endif
 

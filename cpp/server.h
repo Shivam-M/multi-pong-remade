@@ -3,10 +3,8 @@
 #include "logger.h"
 
 #include <protobufs/pong.pb.h>
-#include <iostream>
 #include <string>
 #include <unordered_map>
-#include <cstdlib>
 #include <optional>
 
 #define NOMINMAX
@@ -19,6 +17,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <errno.h>
 #endif
 
 
