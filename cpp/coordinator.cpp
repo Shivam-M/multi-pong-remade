@@ -9,6 +9,57 @@
 
 using namespace multi_pong;
 
+Coordinator::Coordinator() {
+    std::thread status_thread(&Coordinator::check_status, this);
+    status_thread.detach();
+
+#ifdef _WIN32
+    WSADATA wsa_data;
+    if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
+        Logger::error("Failed to initialise Winsock");
+        return;
+    }
+#endif
+
+    coordinator_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (coordinator_socket < 0) {
+        Logger::error("Failed to create socket");
+        return;
+    }
+
+    sockaddr_in addr{};
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(MULTI_PONG_COORDINATOR_PORT);
+
+    int enable = 1;
+#ifdef _WIN32
+    setsockopt(coordinator_socket, SOL_SOCKET, SO_REUSEADDR, (char*)&enable, sizeof(enable));
+    setsockopt(coordinator_socket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char*)&enable, sizeof(enable));
+#else
+    setsockopt(coordinator_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+#endif
+
+    int bound = bind(coordinator_socket, (struct sockaddr*)&addr, sizeof(addr));
+    if (bound < 0) {
+        Logger::error("Failed to bind socket to port ", MULTI_PONG_COORDINATOR_PORT, ": ", bound);
+        return;
+    }
+
+    Logger::debug("Socket bound successfully to port ", MULTI_PONG_COORDINATOR_PORT);
+    listen_clients();
+}
+
+Coordinator::~Coordinator() {
+#ifdef _WIN32
+    closesocket(coordinator_socket);
+    WSACleanup();
+#else
+    close(coordinator_socket);
+#endif
+}
+
 void Coordinator::check_status() {
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(MULTI_PONG_SERVER_CHECK_INTERVAL));

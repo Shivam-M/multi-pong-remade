@@ -64,52 +64,6 @@ class Server {
         std::optional<multi_pong::Player::Identifier> get_player_id_by_token(const std::string& token);
 
     public:
-        Server() {
-
-#ifdef _WIN32
-            WSADATA wsa_data;
-            if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
-                Logger::error("Failed to initialise Winsock");
-                return;
-            }
-#endif
-
-            tokens = generate_tokens();
-            secret = "";
-
-            auto* ball = state.mutable_ball();
-            ball->set_x(0.5f);
-            ball->set_y(0.5f);
-            state.set_frame(0);
-            status.set_phase(multi_pong::Status::WAITING);
-
-            server_socket = socket(AF_INET, SOCK_DGRAM, 0);
-            if (server_socket < 0) {
-                Logger::error("Failed to create socket");
-                return;
-            }
-            
-            sockaddr_in addr{};
-            memset(&addr, 0, sizeof(addr));
-            addr.sin_family = AF_INET;
-            addr.sin_addr.s_addr = INADDR_ANY;
-            addr.sin_port = htons(MULTI_PONG_SERVER_PORT);
-            
-            if (bind(server_socket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-                Logger::error("Failed to bind socket to port ", MULTI_PONG_SERVER_PORT);
-                return;
-            }
-            
-            Logger::info("Socket bound successfully to port ", MULTI_PONG_SERVER_PORT);
-            listen();
-        }
-
-        ~Server() {
-#ifdef _WIN32
-            closesocket(server_socket);
-            WSACleanup();
-#else
-            close(server_socket);
-#endif
-        }
+        Server();
+        ~Server();
 };
