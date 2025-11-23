@@ -73,7 +73,7 @@ void Server::listen() {
     Message message;
     sockaddr_in address{};
     socklen_t address_length = sizeof(address);
-    char buffer[256];
+    char buffer[MULTI_PONG_SERVER_BUFFER];
 
     while (true) {
         int received_data = recvfrom(server_socket, buffer, sizeof(buffer), 0, (struct sockaddr*)&address, &address_length);
