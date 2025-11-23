@@ -17,10 +17,15 @@
 
 using namespace multi_pong;
 
-Coordinator::Coordinator() {
-    std::thread status_thread(&Coordinator::check_status, this);
-    status_thread.detach();
+static void close_socket(int socket_) {
+#ifdef _WIN32
+    closesocket(socket_);
+#else
+    close(socket_);
+#endif
+}
 
+Coordinator::Coordinator() {
 #ifdef _WIN32
     WSADATA wsa_data;
     if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
@@ -28,6 +33,9 @@ Coordinator::Coordinator() {
         return;
     }
 #endif
+
+    std::thread status_thread(&Coordinator::check_status, this);
+    status_thread.detach();
 
     coordinator_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (coordinator_socket < 0) {
@@ -60,11 +68,9 @@ Coordinator::Coordinator() {
 }
 
 Coordinator::~Coordinator() {
+    close_socket(coordinator_socket);
 #ifdef _WIN32
-    closesocket(coordinator_socket);
     WSACleanup();
-#else
-    close(coordinator_socket);
 #endif
 }
 
@@ -160,11 +166,7 @@ std::optional<Message> Coordinator::send_message_to_server(std::pair<std::string
     int sent = sendto(server_socket, message.SerializeAsString().c_str(), message.ByteSizeLong(), 0, (sockaddr*)&address, sizeof(address));
     if (sent < 0) {
         Logger::error("Failed to send message to server ", server.first, ":", server.second);
-#ifdef _WIN32
-        closesocket(server_socket);
-#else
-        close(server_socket);
-#endif
+        close_socket(server_socket);
         return std::nullopt;
     }
 
@@ -183,11 +185,7 @@ std::optional<Message> Coordinator::send_message_to_server(std::pair<std::string
     setsockopt(server_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
     int received = recvfrom(server_socket, buffer, sizeof(buffer) - 1, 0, (sockaddr*)&source_address, &source_address_len);
 
-#ifdef _WIN32
-    closesocket(server_socket);
-#else
-    close(server_socket);
-#endif
+    close_socket(server_socket);
 
     if (received < 0) {
         Logger::info("Server ", server.first, ":", server.second, " is unresponsive");
@@ -283,11 +281,7 @@ void Coordinator::listen_clients() {
 
             if (bytes <= 0) {
                 Logger::info("Client ", inet_ntoa(client_addr.sin_addr), ":", ntohs(client_addr.sin_port), " disconnected");
-#ifdef _WIN32
-                closesocket(client_socket);
-#else
-                close(client_socket);
-#endif
+                close_socket(client_socket);
                 searching_clients.erase(std::remove(searching_clients.begin(), searching_clients.end(), client_socket), searching_clients.end());
                 it = clients.erase(it);
                 continue;
