@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(pong_server
     server.cpp
+    coordinator.cpp
     protobufs/pong.pb.cc
 )
 

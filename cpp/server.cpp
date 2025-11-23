@@ -258,7 +258,8 @@ void Server::send(const T& data, const sockaddr_in& address) {
     sendto(server_socket, serialised_message.data(), serialised_message.size(), 0, (struct sockaddr*)&address, sizeof(address));
 }
 
-int main() {
-    Server server;
-    return 0;
-}
+// todo: move to a single main.cpp which takes --server, --coordinator and --client as command line args with conditional cmake builds
+// int main() {
+//     Server server;
+//     return 0;
+// }
