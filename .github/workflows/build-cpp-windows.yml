@@ -1,0 +1,76 @@
+name: Build C++ Windows
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'cpp/**'
+      - 'compile-protobufs.sh'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'cpp/**'
+      - 'compile-protobufs.sh'
+      - '.github/workflows/**'
+
+env:
+  VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+  VCPKG_DEFAULT_TRIPLET: x64-windows
+  CMAKE_GENERATOR: "Visual Studio 17 2022"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache vcpkg
+        id: vcpkg-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.VCPKG_ROOT }}
+            cpp/vcpkg_installed
+          key: vcpkg-${{ runner.os }}-${{ env.VCPKG_DEFAULT_TRIPLET }}-${{ hashFiles('cpp/vcpkg.json') }}
+          restore-keys: vcpkg-${{ runner.os }}-${{ env.VCPKG_DEFAULT_TRIPLET }}-
+
+      - name: Install vcpkg dependencies
+        if: ${{ steps.vcpkg-cache.outputs.cache-hit != 'true' }}
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg $env:VCPKG_ROOT
+          & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat"
+          cd cpp
+          & "$env:VCPKG_ROOT\vcpkg.exe" install --clean-after-build
+
+      # maybe include a .bat in the future to use $env:PATH with pwsh instead of bash
+      - name: Compile protobufs
+        shell: bash
+        run: |
+          export PATH="$GITHUB_WORKSPACE/cpp/vcpkg_installed/x64-windows/tools/protobuf:$PATH"
+          ./compile-protobufs.sh
+
+      - name: Configure CMake
+        shell: pwsh
+        working-directory: cpp
+        run: |
+          cmake -S . -B build `
+            -G "${env:CMAKE_GENERATOR}" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET="${env:VCPKG_DEFAULT_TRIPLET}" `
+            -DVCPKG_INSTALLED_DIR="$env:GITHUB_WORKSPACE\cpp\vcpkg_installed" `
+            -DVCPKG_MANIFEST_MODE=OFF `
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build (Release)
+        shell: pwsh
+        run: |
+          cmake --build cpp/build --config Release --parallel
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            cpp/build/Release/*
