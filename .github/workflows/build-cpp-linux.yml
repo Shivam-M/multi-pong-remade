@@ -1,0 +1,72 @@
+name: Build C++ Linux
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'cpp/**'
+      - 'compile-protobufs.sh'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'cpp/**'
+      - 'compile-protobufs.sh'
+      - '.github/workflows/**'
+
+env:
+  PROTOBUF_VERSION: "v33.1"
+  PROTOBUF_INSTALL_DIRECTORY: "${{ github.workspace }}/protobuf-build"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache protobuf installation
+        id: cache-protobuf
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PROTOBUF_INSTALL_DIRECTORY }}
+          key: protobuf-${{ runner.os }}-${{ env.PROTOBUF_VERSION }}
+
+      # the latest version from apt is outdated (3.21.12)
+      - name: Build and install protobuf
+        if: steps.cache-protobuf.outputs.cache-hit != 'true'
+        run: |
+          git clone -b ${{ env.PROTOBUF_VERSION }} --depth=1 https://github.com/protocolbuffers/protobuf
+          cd protobuf
+          cmake -S . -B build \
+            -GNinja \
+            -Dprotobuf_BUILD_TESTS=OFF \
+            -Dprotobuf_BUILD_EXAMPLES=OFF \
+            -DCMAKE_INSTALL_PREFIX=${{ env.PROTOBUF_INSTALL_DIRECTORY }} \
+            -DCMAKE_BUILD_TYPE=Release       
+          cmake --build build --parallel
+          cmake --install build
+
+      - name: Compile protobufs
+        run: |
+          export PATH="${{ env.PROTOBUF_INSTALL_DIRECTORY }}/bin:$PATH"
+          ./compile-protobufs.sh
+
+      - name: Configure CMake
+        working-directory: cpp
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH=${{ env.PROTOBUF_INSTALL_DIRECTORY }} \
+            -DCMAKE_EXE_LINKER_FLAGS="-L${{ env.PROTOBUF_INSTALL_DIRECTORY }}/lib"
+
+      - name: Build
+        working-directory: cpp
+        run: cmake --build build --parallel
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: cpp/build/*
