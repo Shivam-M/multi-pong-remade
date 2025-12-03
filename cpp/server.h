@@ -1,7 +1,5 @@
 #pragma once
 
-#include "logger.h"
-
 #include <protobufs/pong.pb.h>
 #include <string>
 #include <unordered_map>

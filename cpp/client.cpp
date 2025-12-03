@@ -1,5 +1,5 @@
 #include "client.h"
-#include "logger.h"
+#include "tools/logger.h"
 #include "tools/renderer_opengl.h"
 
 #include <thread>

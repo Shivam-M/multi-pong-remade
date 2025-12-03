@@ -1,6 +1,5 @@
 #pragma once
 
-#include "logger.h"
 #include "tools/renderer.h"
 
 #include <protobufs/pong.pb.h>
