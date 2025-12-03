@@ -4,10 +4,21 @@ project(multi_pong)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(multi_pong
+    external/glad.c
+    tools/renderer_opengl.cpp
+    client.cpp
     server.cpp
     coordinator.cpp
-    protobufs/pong.pb.cc
+    protobufs/pong.pb.cc)
+
+find_package(glfw3 CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+
+target_include_directories(multi_pong PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+target_link_libraries(multi_pong PRIVATE glfw)
 
 if (WIN32)
     find_package(Protobuf CONFIG REQUIRED)
