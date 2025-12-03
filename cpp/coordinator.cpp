@@ -320,7 +320,7 @@ void Coordinator::send_message_to_client(int client_socket, const Message& messa
 }
 
 // todo: move to a single main.cpp which takes --server, --coordinator and --client as command line args with conditional cmake builds
-int main() {
-    Coordinator coordinator;
-    return 0;
-}
+// int main() {
+//     Coordinator coordinator;
+//     return 0;
+// }
