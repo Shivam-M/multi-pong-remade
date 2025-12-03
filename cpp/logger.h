@@ -9,10 +9,10 @@
 
 class Logger {
     enum class Level : uint8_t {
-        DEBUG   = 0,
-        INFO    = 1,
-        WARNING = 2,
-        ERROR   = 3
+        Debug   = 0,
+        Info    = 1,
+        Warning = 2,
+        Error   = 3
     };
         
     private:
@@ -29,10 +29,10 @@ class Logger {
         
         static std::string get_level_string(Level level) {
             switch (level) {
-                case Level::DEBUG: return "DEBUG";
-                case Level::INFO: return "INFO";
-                case Level::WARNING: return "WARNING";
-                case Level::ERROR: return "ERROR";
+                case Level::Debug: return "DEBUG";
+                case Level::Info: return "INFO";
+                case Level::Warning: return "WARNING";
+                case Level::Error: return "ERROR";
                 default: return "OTHER";
             }
         }
@@ -47,25 +47,25 @@ class Logger {
         }
 
     public:
-        inline static Level level = Logger::Level::INFO;
+        inline static Level level = Logger::Level::Info;
         
         template<typename... Args>
         static void debug(Args&&... args) {
-            log(Level::DEBUG, std::forward<Args>(args)...);
+            log(Level::Debug, std::forward<Args>(args)...);
         }
         
         template<typename... Args>
         static void info(Args&&... args) {
-            log(Level::INFO, std::forward<Args>(args)...);
+            log(Level::Info, std::forward<Args>(args)...);
         }
         
         template<typename... Args>
         static void warning(Args&&... args) {
-            log(Level::WARNING, std::forward<Args>(args)...);
+            log(Level::Warning, std::forward<Args>(args)...);
         }
         
         template<typename... Args>
         static void error(Args&&... args) {
-            log(Level::ERROR, std::forward<Args>(args)...);
+            log(Level::Error, std::forward<Args>(args)...);
         }
 };
