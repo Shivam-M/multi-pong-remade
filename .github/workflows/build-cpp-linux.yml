@@ -25,6 +25,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglfw3 \
+            libglfw3-dev \
+            libglm-dev
+
       - name: Cache protobuf installation
         id: cache-protobuf
         uses: actions/cache@v4
