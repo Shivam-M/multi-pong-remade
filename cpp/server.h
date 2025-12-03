@@ -7,17 +7,6 @@
 #include <optional>
 
 
-static constexpr int MULTI_PONG_SERVER_PORT = 5001;
-static constexpr int MULTI_PONG_SERVER_BUFFER = 512;
-static constexpr int MULTI_PONG_SERVER_UPDATE_RATE = 1000 / 128;
-static constexpr float MULTI_PONG_BALL_WIDTH = 0.015f;
-static constexpr float MULTI_PONG_BALL_HEIGHT = 0.015f * (16.0f / 9.0f);
-static constexpr float MULTI_PONG_PADDLE_WIDTH = 0.015f;
-static constexpr float MULTI_PONG_PADDLE_HEIGHT = 0.15f;
-static constexpr float MULTI_PONG_PADDLE_HORIZONTAL_PADDING = 0.1f;
-static constexpr float MULTI_PONG_PADDLE_HIT_EDGE_FACTOR = 0.5f;
-
-
 class Server {
     private:
         multi_pong::Tokens tokens;

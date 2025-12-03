@@ -10,12 +10,6 @@
 #include <utility>
 
 
-static constexpr int MULTI_PONG_COORDINATOR_PORT = 4999;
-static constexpr int MULTI_PONG_SERVER_CHECK_INTERVAL = 5;
-static constexpr int MULTI_PONG_SERVER_CHECK_TIMEOUT = 1;
-static constexpr int MULTI_PONG_SERVER_BUFFER = 512;
-
-
 class Coordinator {
     private:
         socket_t coordinator_socket;

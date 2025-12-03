@@ -1,6 +1,8 @@
 #pragma once
 
 #include <protobufs/pong.pb.h>
+#include <string>
+#include <utility>
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -20,6 +22,21 @@ typedef SOCKET socket_t;
 #else
 typedef int socket_t;
 #endif
+
+inline constexpr float MULTI_PONG_BALL_WIDTH = 0.015f;
+inline constexpr float MULTI_PONG_BALL_HEIGHT = 0.015f * (16.0f / 9.0f);
+inline constexpr float MULTI_PONG_PADDLE_WIDTH = 0.015f;
+inline constexpr float MULTI_PONG_PADDLE_HEIGHT = 0.15f;
+inline constexpr float MULTI_PONG_PADDLE_HORIZONTAL_PADDING = 0.1f;
+inline constexpr float MULTI_PONG_PADDLE_HIT_EDGE_FACTOR = 0.5f;
+
+inline constexpr int MULTI_PONG_COORDINATOR_PORT = 4999;
+inline constexpr int MULTI_PONG_SERVER_PORT = 5001;
+inline constexpr int MULTI_PONG_SERVER_BUFFER = 512;
+inline constexpr int MULTI_PONG_SERVER_CHECK_INTERVAL = 5;
+inline constexpr int MULTI_PONG_SERVER_CHECK_TIMEOUT = 1;
+inline constexpr int MULTI_PONG_SERVER_UPDATE_RATE = 1000 / 128;
+inline const std::pair<std::string, int> MULTI_PONG_COORDINATOR_ADDRESS = { "127.0.0.1", 4999 };
 
 inline void close_socket(socket_t socket_) {
 #ifdef _WIN32
