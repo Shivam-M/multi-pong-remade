@@ -143,7 +143,8 @@ std::optional<Message> Coordinator::send_message_to_server(std::pair<std::string
     address.sin_port = htons(server.second);
     inet_pton(AF_INET, server.first.c_str(), &address.sin_addr);
 
-    int sent = sendto(server_socket, message.SerializeAsString().c_str(), message.ByteSizeLong(), 0, (sockaddr*)&address, sizeof(address));
+    std::string serialised_message = message.SerializeAsString();
+    int sent = sendto(server_socket, serialised_message.c_str(), static_cast<int>(serialised_message.size()), 0, (sockaddr*)&address, sizeof(address));
     if (sent < 0) {
         Logger::error("Failed to send message to server ", server.first, ":", server.second);
         close_socket(server_socket);
@@ -217,7 +218,7 @@ void Coordinator::listen_clients() {
             }
         }
 
-        if (select(max_fd + 1, &read_fds, nullptr, nullptr, nullptr) < 0) {
+        if (select(static_cast<int>(max_fd) + 1, &read_fds, nullptr, nullptr, nullptr) < 0) {
             continue;
 		}
 
@@ -241,7 +242,7 @@ void Coordinator::listen_clients() {
 
             clients.push_back(client_socket);
 
-            Logger::info("Client ", inet_ntoa(client_addr.sin_addr), ":", ntohs(client_addr.sin_port), " connected");
+            Logger::info("Client ", address_string(client_addr), ":", ntohs(client_addr.sin_port), " connected");
         }
 
         for (auto it = clients.begin(); it != clients.end();) {
@@ -260,7 +261,7 @@ void Coordinator::listen_clients() {
             getpeername(client_socket, (sockaddr*)&client_addr, &len);
 
             if (bytes <= 0) {
-                Logger::info("Client ", inet_ntoa(client_addr.sin_addr), ":", ntohs(client_addr.sin_port), " disconnected");
+                Logger::info("Client ", address_string(client_addr), ":", ntohs(client_addr.sin_port), " disconnected");
                 close_socket(client_socket);
                 searching_clients.erase(std::remove(searching_clients.begin(), searching_clients.end(), client_socket), searching_clients.end());
                 it = clients.erase(it);
@@ -282,11 +283,11 @@ void Coordinator::listen_clients() {
 
             switch (message.content_case()) {
                 case Message::kSearch:
-                    Logger::info("Added client ", inet_ntoa(client_addr.sin_addr), ":", ntohs(client_addr.sin_port), " as a searching player");
+                    Logger::info("Added client ", address_string(client_addr), ":", ntohs(client_addr.sin_port), " as a searching player");
                     searching_clients.push_back(client_socket);
                     break;
                 default:
-                    Logger::warning("Invalid message type ", message.content_case(), " from client ", inet_ntoa(client_addr.sin_addr), ":", ntohs(client_addr.sin_port));
+                    Logger::warning("Invalid message type ", message.content_case(), " from client ", address_string(client_addr), ":", ntohs(client_addr.sin_port));
                     break;
 			};
 
@@ -296,7 +297,8 @@ void Coordinator::listen_clients() {
 }
 
 void Coordinator::send_message_to_client(socket_t client_socket, const Message& message) {
-    send(client_socket, message.SerializeAsString().c_str(), message.ByteSizeLong(), 0);
+    std::string serialised_message = message.SerializeAsString();
+    send(client_socket, serialised_message.c_str(), static_cast<int>(serialised_message.size()), 0);
 }
 
 // todo: move to a single main.cpp which takes --server, --coordinator and --client as command line args with conditional cmake builds

@@ -6,6 +6,12 @@
 #include <sstream>
 #include <cstdint>
 
+#ifdef _WIN32
+#define LOCALTIME(resultptr, timeptr) localtime_s((resultptr), (timeptr))
+#else
+#define LOCALTIME(resultptr, timeptr) std::localtime_r((timeptr), (resultptr))
+#endif
+
 
 class Logger {
     enum class Level : uint8_t {
@@ -18,11 +24,18 @@ class Logger {
     private:
         static std::string get_timestamp() {
             auto now = std::chrono::system_clock::now();
-            auto time_t = std::chrono::system_clock::to_time_t(now);
+            auto tt = std::chrono::system_clock::to_time_t(now);
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
             
+            struct tm tm_info;
+#ifdef _WIN32
+            localtime_s(&tm_info, &tt);
+#else
+            localtime_r(&tt, &tm_info);
+#endif
+ 
             std::stringstream ss;
-            ss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
+            ss << std::put_time(&tm_info, "%Y-%m-%d %H:%M:%S");
             ss << "," << std::setfill('0') << std::setw(3) << ms.count();
             return ss.str();
         }

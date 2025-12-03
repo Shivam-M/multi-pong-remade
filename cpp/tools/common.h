@@ -21,10 +21,18 @@ typedef SOCKET socket_t;
 typedef int socket_t;
 #endif
 
-static void close_socket(socket_t socket_) {
+inline void close_socket(socket_t socket_) {
 #ifdef _WIN32
     closesocket(socket_);
 #else
     close(socket_);
 #endif
+}
+
+inline std::string address_string(const sockaddr_in& addr) {
+    char address_buffer[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &addr.sin_addr, address_buffer, INET_ADDRSTRLEN) == nullptr) {
+        return "unknown";
+    }
+    return std::string(address_buffer);
 }

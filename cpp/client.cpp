@@ -87,6 +87,8 @@ void Client::listen_coordinator() {
             case Message::kMatch:
                 handle_match(message.match());
                 break;
+            default:
+                Logger::warning("Received unsupported message type: ", message.content_case());
         }
     }
 }
@@ -123,7 +125,7 @@ void Client::listen_server() {
 
 void Client::send_message_to_coordinator(multi_pong::Message message) {
     std::string serialised_message = message.SerializeAsString();
-    send(coordinator_socket, serialised_message.c_str(), serialised_message.size(), 0);
+    send(coordinator_socket, serialised_message.c_str(), static_cast<int>(serialised_message.size()), 0);
 }
 
 template<typename T>
@@ -140,7 +142,7 @@ void Client::send_message_to_server(const T& data) {
 
     std::string serialised_message;
     message.SerializeToString(&serialised_message);
-    sendto(server_socket, serialised_message.data(), serialised_message.size(), 0, (struct sockaddr*)&server_address, sizeof(server_address));
+    sendto(server_socket, serialised_message.data(), static_cast<int>(serialised_message.size()), 0, (struct sockaddr*)&server_address, sizeof(server_address));
 }
 
 template void Client::send_message_to_server<Join>(const Join&);

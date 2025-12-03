@@ -108,14 +108,14 @@ void Server::handle_query(const sockaddr_in& address) {
 }
 
 void Server::handle_prepare(const Prepare& prepare, const sockaddr_in& address) {
-    Logger::info("Received preparation request from ", inet_ntoa(address.sin_addr), ":", ntohs(address.sin_port));
+    Logger::info("Received preparation request from ", address_string(address), ":", ntohs(address.sin_port));
 
     if (status.phase() != Status::WAITING) {
         return;
     }
 
     if (secret == "") {
-        Logger::warning("No secret set - skipping authentication with ", inet_ntoa(address.sin_addr), ":", ntohs(address.sin_port));
+        Logger::warning("No secret set - skipping authentication with ", address_string(address), ":", ntohs(address.sin_port));
     } else if (secret != prepare.secret()) {
         return;
     }
@@ -126,7 +126,7 @@ void Server::handle_prepare(const Prepare& prepare, const sockaddr_in& address) 
 }
 
 void Server::handle_join(const Join& join, const sockaddr_in& address) {
-    Logger::info("Received join request from client ", inet_ntoa(address.sin_addr), ":", ntohs(address.sin_port));
+    Logger::info("Received join request from client ", address_string(address), ":", ntohs(address.sin_port));
 
     if (status.phase() != Status::PREPARING) {
         return;
@@ -147,7 +147,7 @@ void Server::handle_join(const Join& join, const sockaddr_in& address) {
 
     token_addresses[token] = address;
 
-    Logger::info("Registered client ", inet_ntoa(address.sin_addr), ":", ntohs(address.sin_port), " as player ", static_cast<int>(*player_id));
+    Logger::info("Registered client ", address_string(address), ":", ntohs(address.sin_port), " as player ", static_cast<int>(*player_id));
 
     if (clients.size() >= 2) {
         start_match();
@@ -232,7 +232,7 @@ void Server::game_loop() {
         float paddle_y = clients[is_ball_on_left_side ? tokens.token_1() : tokens.token_2()].paddle_location();
 
         if (did_ball_hit_paddle(paddle_x, paddle_y, relative_hit)) {
-            ball_velocity[0] *= -1 - (MULTI_PONG_PADDLE_HIT_EDGE_FACTOR * abs(relative_hit - 0.5));
+            ball_velocity[0] *= -1 - (MULTI_PONG_PADDLE_HIT_EDGE_FACTOR * abs(relative_hit - 0.5f));
         }
 
         state.set_frame(state.frame() + 1);
@@ -301,8 +301,12 @@ void Server::send(const T& data, const sockaddr_in& address) {
 
     std::string serialised_message;
     message.SerializeToString(&serialised_message);
-    sendto(server_socket, serialised_message.data(), serialised_message.size(), 0, (struct sockaddr*)&address, sizeof(address));
+    sendto(server_socket, serialised_message.data(), static_cast<int>(serialised_message.size()), 0, (struct sockaddr*)&address, sizeof(address));
 }
+
+template void Server::send<Status>(const Status&, const sockaddr_in& address);
+template void Server::send<State>(const State&, const sockaddr_in& address);
+template void Server::send<Tokens>(const Tokens&, const sockaddr_in& address);
 
 // todo: move to a single main.cpp which takes --server, --coordinator and --client as command line args with conditional cmake builds
 // int main() {
