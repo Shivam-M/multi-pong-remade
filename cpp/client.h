@@ -1,23 +1,11 @@
 #pragma once
 
+#include "tools/common.h"
 #include "tools/renderer.h"
 
-#include <protobufs/pong.pb.h>
 #include <string>
 #include <utility>
 #include <memory>
-
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#else
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <errno.h>
-#endif
 
 
 static const std::pair<std::string, int> MULTI_PONG_COORDINATOR_ADDRESS = { "127.0.0.1", 4999 };
@@ -33,8 +21,8 @@ class Client {
     private:
         std::unique_ptr<Renderer> renderer;
 
-        int coordinator_socket;
-        int server_socket;
+        socket_t coordinator_socket;
+        socket_t server_socket;
         sockaddr_in server_address;
         multi_pong::State state;
         std::string token;

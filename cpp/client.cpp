@@ -4,18 +4,6 @@
 
 #include <thread>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#else
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <errno.h>
-#endif
-
 using namespace multi_pong;
 
 Client::Client() {
@@ -57,13 +45,10 @@ Client::Client() {
 }
 
 Client::~Client() {
+    close_socket(coordinator_socket);
+    close_socket(server_socket);
 #ifdef _WIN32
-    closesocket(coordinator_socket);
-    closesocket(server_socket);
     WSACleanup();
-#else
-    close(coordinator_socket);
-    close(server_socket);
 #endif
     active = false;
 }

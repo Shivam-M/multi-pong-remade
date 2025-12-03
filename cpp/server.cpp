@@ -46,11 +46,9 @@ Server::Server() {
 }
 
 Server::~Server() {
+    close_socket(server_socket);
 #ifdef _WIN32
-    closesocket(server_socket);
     WSACleanup();
-#else
-    close(server_socket);
 #endif
 }
 

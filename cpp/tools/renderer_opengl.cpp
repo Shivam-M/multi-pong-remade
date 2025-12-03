@@ -2,6 +2,8 @@
 #include "logger.h"
 #include "../client.h"
 
+#include <protobufs/pong.pb.h>
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>

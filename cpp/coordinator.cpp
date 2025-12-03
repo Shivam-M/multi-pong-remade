@@ -3,27 +3,7 @@
 
 #include <thread>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#else
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <errno.h>
-#endif
-
 using namespace multi_pong;
-
-static void close_socket(int socket_) {
-#ifdef _WIN32
-    closesocket(socket_);
-#else
-    close(socket_);
-#endif
-}
 
 Coordinator::Coordinator() {
 #ifdef _WIN32
@@ -118,7 +98,7 @@ void Coordinator::matchmake() {
         match.set_token(token);
         match.mutable_player()->CopyFrom(player);
 
-        int client = searching_clients.front();
+        socket_t client = searching_clients.front();
 		searching_clients.pop_front();
 
 		Message match_message = Message();
@@ -153,7 +133,7 @@ bool Coordinator::get_prepared_server(std::pair<std::string, int>& prepared_serv
 }
 
 std::optional<Message> Coordinator::send_message_to_server(std::pair<std::string, int> server, Message message) {
-    int server_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    socket_t server_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (server_socket < 0) {
         return std::nullopt;
     }
@@ -228,7 +208,7 @@ void Coordinator::listen_clients() {
 		FD_ZERO(&read_fds);
 
 		FD_SET(coordinator_socket, &read_fds);
-        int max_fd = coordinator_socket;
+        socket_t max_fd = coordinator_socket;
 
         for (auto client : clients) {
             FD_SET(client, &read_fds);
@@ -252,7 +232,7 @@ void Coordinator::listen_clients() {
                 continue;
             }
 #else
-            int client_socket = accept(coordinator_socket, (sockaddr*)&client_addr, &len);
+            socket_t client_socket = accept(coordinator_socket, (sockaddr*)&client_addr, &len);
             if (client_socket < 0) {
                 Logger::warning("Failed to accept client connection: ", errno);
                 continue;
@@ -265,7 +245,7 @@ void Coordinator::listen_clients() {
         }
 
         for (auto it = clients.begin(); it != clients.end();) {
-            int client_socket = *it;
+            socket_t client_socket = *it;
 
             if (!FD_ISSET(client_socket, &read_fds)) {
                 ++it;
@@ -315,7 +295,7 @@ void Coordinator::listen_clients() {
     }
 }
 
-void Coordinator::send_message_to_client(int client_socket, const Message& message) {
+void Coordinator::send_message_to_client(socket_t client_socket, const Message& message) {
     send(client_socket, message.SerializeAsString().c_str(), message.ByteSizeLong(), 0);
 }
 

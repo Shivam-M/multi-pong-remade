@@ -1,22 +1,10 @@
 #pragma once
 
-#include <protobufs/pong.pb.h>
+#include "tools/common.h"
+
 #include <string>
 #include <unordered_map>
 #include <optional>
-
-#define NOMINMAX
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#else
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <errno.h>
-#endif
 
 
 static constexpr int MULTI_PONG_SERVER_PORT = 5001;
@@ -39,7 +27,7 @@ class Server {
         multi_pong::Status status;
         std::unordered_map<std::string, multi_pong::Player> clients;
         std::unordered_map<std::string, sockaddr_in> token_addresses;
-        int server_socket;
+        socket_t server_socket;
 
         multi_pong::Tokens generate_tokens();
 
