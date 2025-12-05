@@ -12,6 +12,7 @@ class Client {
     private:
         std::unique_ptr<Renderer> renderer;
 
+        std::pair<std::string, int> coordinator_address;
         socket_t coordinator_socket;
         socket_t server_socket;
         sockaddr_in server_address;
@@ -33,7 +34,7 @@ class Client {
         void update_loop();
 
     public:
-        Client();
+        Client(const std::string& address, int port);
         ~Client();
 
         void send_move(multi_pong::Direction move);

@@ -14,12 +14,13 @@
 
 
 class Logger {
-    enum class Level : uint8_t {
-        Debug   = 0,
-        Info    = 1,
-        Warning = 2,
-        Error   = 3
-    };
+    public:
+        enum class Level : uint8_t {
+            Debug   = 0,
+            Info    = 1,
+            Warning = 2,
+            Error   = 3
+        };
         
     private:
         static std::string get_timestamp() {

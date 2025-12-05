@@ -3,10 +3,11 @@
 #include "tools/renderer_opengl.h"
 
 #include <thread>
+#include <string>
 
 using namespace multi_pong;
 
-Client::Client() {
+Client::Client(const std::string& host, int port) {
 #ifdef _WIN32
     WSADATA wsa_data;
     if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
@@ -14,6 +15,8 @@ Client::Client() {
         return;
     }
 #endif
+
+    coordinator_address = { host, port };
 
     coordinator_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (coordinator_socket < 0) {
@@ -56,20 +59,20 @@ Client::~Client() {
 bool Client::connect_coordinator() {
     sockaddr_in coordinator_server;
     coordinator_server.sin_family = AF_INET;
-    coordinator_server.sin_port = htons(MULTI_PONG_COORDINATOR_ADDRESS.second);
-    inet_pton(AF_INET, MULTI_PONG_COORDINATOR_ADDRESS.first.c_str(), &coordinator_server.sin_addr);
+    coordinator_server.sin_port = htons(coordinator_address.second);
+    inet_pton(AF_INET, coordinator_address.first.c_str(), &coordinator_server.sin_addr);
 
     if (connect(coordinator_socket, (struct sockaddr*)&coordinator_server, sizeof(coordinator_server)) < 0) {
-        Logger::error("Failed to connect to the game coordinator");
+        Logger::error("Failed to connect to the game coordinator at ", coordinator_address.first, ":", coordinator_address.second);
         return false;
     }
     
-    Logger::info("Connected to game coordinator");
+    Logger::info("Connected to game coordinator at ", coordinator_address.first, ":", coordinator_address.second);
     return true;
 }
 
 void Client::listen_coordinator() {
-    Logger::info("Listening the game coordinator");
+    Logger::info("Listening the game coordinator...");
     while (active) {
         char buffer[MULTI_PONG_SERVER_BUFFER];
 
@@ -175,10 +178,4 @@ void Client::send_move(multi_pong::Direction move) {
 
 void Client::update_loop() {
     renderer->render_loop();
-}
-
-// todo: move to a single main.cpp which takes --server, --coordinator and --client as command line args with conditional cmake builds
-int main() {
-    Client client;
-    return 0;
 }

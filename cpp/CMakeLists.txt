@@ -9,6 +9,7 @@ add_executable(multi_pong
     client.cpp
     server.cpp
     coordinator.cpp
+    main.cpp
     protobufs/pong.pb.cc)
 
 find_package(glfw3 CONFIG REQUIRED)

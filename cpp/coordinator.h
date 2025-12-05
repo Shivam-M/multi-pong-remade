@@ -12,6 +12,7 @@
 
 class Coordinator {
     private:
+        int port;
         socket_t coordinator_socket;
         std::string secret = "";
         std::vector<socket_t> clients;
@@ -32,6 +33,6 @@ class Coordinator {
         std::optional<multi_pong::Message> send_message_to_server(std::pair<std::string, int> server, multi_pong::Message message);
 
     public:
-        Coordinator();
+        Coordinator(int port, std::vector<std::pair<std::string, int>> addresses);
         ~Coordinator();
 };

@@ -6,7 +6,7 @@
 
 using namespace multi_pong;
 
-Server::Server() {
+Server::Server(int server_port) : port(server_port) {
 #ifdef _WIN32
     WSADATA wsa_data;
     if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
@@ -34,14 +34,14 @@ Server::Server() {
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(MULTI_PONG_SERVER_PORT);
+    addr.sin_port = htons(port);
 
     if (bind(server_socket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        Logger::error("Failed to bind socket to port ", MULTI_PONG_SERVER_PORT);
+        Logger::error("Failed to bind socket to port ", port);
         return;
     }
 
-    Logger::info("Socket bound successfully to port ", MULTI_PONG_SERVER_PORT);
+    Logger::info("Socket bound successfully to port ", port);
     listen();
 }
 
@@ -66,7 +66,7 @@ Tokens Server::generate_tokens() {
 }
 
 void Server::listen() {
-    Logger::info("Started listening on 0.0.0.0:", MULTI_PONG_SERVER_PORT);
+    Logger::info("Started listening on 0.0.0.0:", port);
 
     Message message;
     sockaddr_in address{};
@@ -307,9 +307,3 @@ void Server::send(const T& data, const sockaddr_in& address) {
 template void Server::send<Status>(const Status&, const sockaddr_in& address);
 template void Server::send<State>(const State&, const sockaddr_in& address);
 template void Server::send<Tokens>(const Tokens&, const sockaddr_in& address);
-
-// todo: move to a single main.cpp which takes --server, --coordinator and --client as command line args with conditional cmake builds
-// int main() {
-//     Server server;
-//     return 0;
-// }

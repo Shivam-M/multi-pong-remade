@@ -2,10 +2,13 @@
 #include "tools/logger.h"
 
 #include <thread>
+#include <string>
+#include <vector>
+#include <utility>
 
 using namespace multi_pong;
 
-Coordinator::Coordinator() {
+Coordinator::Coordinator(int coordinator_port, std::vector<std::pair<std::string, int>> servers) : port(coordinator_port) {
 #ifdef _WIN32
     WSADATA wsa_data;
     if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
@@ -13,6 +16,10 @@ Coordinator::Coordinator() {
         return;
     }
 #endif
+
+    for (auto& server : servers) {
+        server_list[server] = -1;
+    }
 
     std::thread status_thread(&Coordinator::check_status, this);
     status_thread.detach();
@@ -27,7 +34,7 @@ Coordinator::Coordinator() {
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(MULTI_PONG_COORDINATOR_PORT);
+    addr.sin_port = htons(port);
 
     int enable = 1;
 #ifdef _WIN32
@@ -39,11 +46,11 @@ Coordinator::Coordinator() {
 
     int bound = bind(coordinator_socket, (struct sockaddr*)&addr, sizeof(addr));
     if (bound < 0) {
-        Logger::error("Failed to bind socket to port ", MULTI_PONG_COORDINATOR_PORT, ": ", bound);
+        Logger::error("Failed to bind socket to port ", port, ": ", bound);
         return;
     }
 
-    Logger::debug("Socket bound successfully to port ", MULTI_PONG_COORDINATOR_PORT);
+    Logger::debug("Socket bound successfully to port ", port);
     listen_clients();
 }
 
@@ -202,7 +209,7 @@ std::optional<Message> Coordinator::send_message_to_server(std::pair<std::string
 
 void Coordinator::listen_clients() {
     listen(coordinator_socket, SOMAXCONN);
-    Logger::info("Starting listening on 0.0.0.0:", MULTI_PONG_COORDINATOR_PORT);
+    Logger::info("Starting listening on 0.0.0.0:", port);
 
     while (true) {
 		fd_set read_fds;
@@ -300,9 +307,3 @@ void Coordinator::send_message_to_client(socket_t client_socket, const Message& 
     std::string serialised_message = message.SerializeAsString();
     send(client_socket, serialised_message.c_str(), static_cast<int>(serialised_message.size()), 0);
 }
-
-// todo: move to a single main.cpp which takes --server, --coordinator and --client as command line args with conditional cmake builds
-// int main() {
-//     Coordinator coordinator;
-//     return 0;
-// }

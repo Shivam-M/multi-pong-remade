@@ -9,6 +9,7 @@
 
 class Server {
     private:
+        int port;
         multi_pong::Tokens tokens;
         std::string secret = "";
         float ball_velocity[2] = {0.0f, 0.0f};
@@ -38,6 +39,6 @@ class Server {
         std::optional<multi_pong::Player::Identifier> get_player_id_by_token(const std::string& token);
 
     public:
-        Server();
+        Server(int port);
         ~Server();
 };
