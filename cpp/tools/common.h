@@ -27,6 +27,7 @@ inline constexpr float MULTI_PONG_BALL_WIDTH = 0.015f;
 inline constexpr float MULTI_PONG_BALL_HEIGHT = 0.015f * (16.0f / 9.0f);
 inline constexpr float MULTI_PONG_PADDLE_WIDTH = 0.015f;
 inline constexpr float MULTI_PONG_PADDLE_HEIGHT = 0.15f;
+inline constexpr float MULTI_PONG_PADDLE_SPEED = 0.015f;
 inline constexpr float MULTI_PONG_PADDLE_HORIZONTAL_PADDING = 0.1f;
 inline constexpr float MULTI_PONG_PADDLE_HIT_EDGE_FACTOR = 0.5f;
 

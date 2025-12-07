@@ -165,7 +165,7 @@ void Server::handle_movement(const Movement& movement, const sockaddr_in& addres
     }
 
     clients[movement.token()].set_paddle_direction(movement.direction());
-    Logger::info("Player ", static_cast<int>(*player_id), " sent movement direction ", movement.direction());
+    Logger::debug("Player ", static_cast<int>(*player_id), " sent movement direction ", movement.direction());
 }
 
 std::string Server::get_token_by_player_id(const Player::Identifier& player_id) {
@@ -192,14 +192,12 @@ void Server::start_match() {
 }
 
 void Server::game_loop() {
-    const float paddle_speed = 0.02f;
-    const float ball_speed_increment = 0.0005f;
     Ball* ball = state.mutable_ball();
     
     reset_ball();
 
     while (status.phase() == Status::STARTED) {
-
+        
         ball->set_x(ball->x() + ball_velocity[0]);
         ball->set_y(ball->y() + ball_velocity[1]);
 
@@ -218,9 +216,9 @@ void Server::game_loop() {
             float paddle_location = player.paddle_location();
 
             if (player.paddle_direction() == Direction::UP) {
-                paddle_location -= paddle_speed;
+                paddle_location -= MULTI_PONG_PADDLE_SPEED;
             } else if (player.paddle_direction() == Direction::DOWN) {
-                paddle_location += paddle_speed;
+                paddle_location += MULTI_PONG_PADDLE_SPEED;
             }
             
             player.set_paddle_location(std::clamp(paddle_location, 0.0f, 1.0f));

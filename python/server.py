@@ -15,6 +15,7 @@ MULTI_PONG_BALL_WIDTH = 0.015
 MULTI_PONG_BALL_HEIGHT = 0.015 * (16.0 / 9.0)
 MULTI_PONG_PADDLE_WIDTH = 0.015
 MULTI_PONG_PADDLE_HEIGHT = 0.15
+MULTI_PONG_PADDLE_SPEED = 0.015
 MULTI_PONG_PADDLE_HORIZONTAL_PADDING = 0.1
 MULTI_PONG_PADDLE_HIT_EDGE_FACTOR = 0.5
 
@@ -135,7 +136,7 @@ class Server:
 
     def game_loop(self):
         self.reset_ball()
-        
+
         while self.status.phase == Status.Phase.STARTED:
             self.state.ball.x += self.ball_velocity[0]
             self.state.ball.y += self.ball_velocity[1]
@@ -154,9 +155,9 @@ class Server:
                 player = self.clients[token]
 
                 if player.paddle_direction == Direction.UP:
-                    player.paddle_location -= 0.01
+                    player.paddle_location -= MULTI_PONG_PADDLE_SPEED
                 elif player.paddle_direction == Direction.DOWN:
-                    player.paddle_location += 0.01
+                    player.paddle_location += MULTI_PONG_PADDLE_SPEED
 
                 if player.paddle_location < 0:
                     player.paddle_location = 0
