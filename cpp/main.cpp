@@ -3,22 +3,30 @@
 #include "server.h"
 #include "tools/logger.h"
 #include "tools/common.h"
+#include "tools/renderer.h"
+#include "tools/renderer_opengl.h"
+
+#ifdef _WIN32
+#include "tools/renderer_directx11.h"
+#endif
 
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 #include <iostream>
+#include <memory>
 
 struct Arguments {
 	bool invalid = false;
 	bool client = true;
 	bool server = false;
 	bool coordinator = false;
+	bool directx_11 = false;
 	std::optional<int> port;
 	std::optional<std::string> host;
 	std::vector<std::pair<std::string, int>> server_addresses;
-	Logger::Level log_level = Logger::Level::Info;
+	Logger::Level log_level = Logger::Level::Debug;
 };
 
 static std::optional<std::pair<std::string, int>> parse_address(const std::string& address) {
@@ -55,6 +63,8 @@ static Arguments parse_arguments(int argc, char** argv) {
 			arguments.server = true;
 		} else if (argument == "--coordinator") {
 			arguments.coordinator = true;
+		} else if (argument == "--directx11" || argument == "--dx11") {
+			arguments.directx_11 = true;
 		} else if (argument == "--verbose") {
 			arguments.log_level = Logger::Level::Debug;
 		} else if (argument == "--host") {
@@ -144,7 +154,22 @@ int main(int argc, char** argv) {
 		std::string address = arguments.host.value_or(MULTI_PONG_COORDINATOR_ADDRESS.first);
 		int port = arguments.port.value_or(MULTI_PONG_COORDINATOR_ADDRESS.second);
 
-		Client client = Client(address, port);
+		std::unique_ptr<Renderer> renderer;
+
+#ifdef _WIN32
+		if (arguments.directx_11) {
+			renderer = std::make_unique<DirectX11Renderer>();
+		} else {
+			renderer = std::make_unique<OpenGLRenderer>();
+		}
+#else
+		if (arguments.directx_11) {
+			Logger::warning("DirectX 11 is not supported on this platform - falling back to the OpenGL renderer");
+		}
+		renderer = std::make_unique<OpenGLRenderer>();
+#endif
+
+		Client client = Client(address, port, std::move(renderer));
 		return 0;
 	}
 	

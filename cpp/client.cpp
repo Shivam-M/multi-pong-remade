@@ -1,13 +1,12 @@
 #include "client.h"
 #include "tools/logger.h"
-#include "tools/renderer_opengl.h"
 
 #include <thread>
 #include <string>
 
 using namespace multi_pong;
 
-Client::Client(const std::string& host, int port) {
+Client::Client(const std::string& host, int port, std::unique_ptr<Renderer> game_renderer) {
 #ifdef _WIN32
     WSADATA wsa_data;
     if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
@@ -15,6 +14,9 @@ Client::Client(const std::string& host, int port) {
         return;
     }
 #endif
+
+    state.mutable_ball()->set_x(0.5);
+    state.mutable_ball()->set_y(0.5);
 
     coordinator_address = { host, port };
 
@@ -41,8 +43,8 @@ Client::Client(const std::string& host, int port) {
     search_message.mutable_search()->CopyFrom(Search());
     send_message_to_coordinator(search_message);
 
-    renderer = std::make_unique<OpenGLRenderer>(this);
-    renderer->setup();
+    renderer = std::move(game_renderer);
+    renderer->setup(this);
 
     update_loop();
 }
@@ -76,12 +78,17 @@ void Client::listen_coordinator() {
     while (active) {
         char buffer[MULTI_PONG_SERVER_BUFFER];
 
-        int receive_bytes = recv(coordinator_socket, buffer, MULTI_PONG_SERVER_BUFFER, 0);
+        int received_bytes = recv(coordinator_socket, buffer, MULTI_PONG_SERVER_BUFFER, 0);
 
-        if (!receive_bytes) continue;
+        if (!received_bytes) continue;
+
+        if (received_bytes < 0) {
+            Logger::error("Lost connection to the game coordinator");
+            break;
+        }
 
         Message message;
-        if (!message.ParseFromArray(buffer, receive_bytes)) {
+        if (!message.ParseFromArray(buffer, received_bytes)) {
             Logger::warning("Failed to process data into a protobuf message: ", buffer);
             continue;
         }

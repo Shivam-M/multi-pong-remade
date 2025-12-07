@@ -11,7 +11,7 @@ class OpenGLRenderer : public Renderer {
 	private:
 		Client* client;
 		GLFWwindow* window;
-		GLuint shader, vao, vbo;
+		GLuint shader = 0, vao = 0, vbo = 0;
 
 		void render_window();
 		void render_quad(float x, float y, float width, float height);
@@ -22,10 +22,10 @@ class OpenGLRenderer : public Renderer {
 		static void keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 	public:
-		OpenGLRenderer(Client* c) : client(c) {}
+		OpenGLRenderer() {}
 		~OpenGLRenderer();
 
-		bool setup() override;
+		bool setup(Client* c) override;
 		void toggle_fullscreen() override;
 		void update_state() override {};
 		void render_loop() override;

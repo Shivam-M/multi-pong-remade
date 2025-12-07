@@ -32,8 +32,10 @@ void main() {
 }
 )";
 
-bool OpenGLRenderer::setup() {
+bool OpenGLRenderer::setup(Client* c) {
     Logger::debug("Initialising OpenGL-based renderer...");
+
+    client = c;
 
     if (!glfwInit()) {
         Logger::error("Failed to initialise GLFW");
@@ -208,9 +210,9 @@ void OpenGLRenderer::render_loop() {
 }
 
 OpenGLRenderer::~OpenGLRenderer() {
-    glDeleteProgram(shader);
-    glDeleteVertexArrays(1, &vao);
-    glDeleteBuffers(1, &vbo);
+    if (shader) glDeleteProgram(shader);
+    if (vao) glDeleteVertexArrays(1, &vao);
+    if (vbo) glDeleteBuffers(1, &vbo);
     if (window) glfwDestroyWindow(window);
     glfwTerminate();
 }

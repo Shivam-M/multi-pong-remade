@@ -34,7 +34,7 @@ class Client {
         void update_loop();
 
     public:
-        Client(const std::string& address, int port);
+        Client(const std::string& address, int port, std::unique_ptr<Renderer> game_renderer);
         ~Client();
 
         void send_move(multi_pong::Direction move);

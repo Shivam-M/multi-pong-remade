@@ -23,6 +23,8 @@ target_link_libraries(multi_pong PRIVATE glfw)
 
 if (WIN32)
     find_package(Protobuf CONFIG REQUIRED)
+    target_sources(multi_pong PRIVATE tools/renderer_directx11.cpp)
+    target_link_libraries(multi_pong PRIVATE d3d11 dxgi d3dcompiler)
     target_link_libraries(multi_pong PRIVATE protobuf::libprotobuf)
     target_include_directories(multi_pong PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 else()
