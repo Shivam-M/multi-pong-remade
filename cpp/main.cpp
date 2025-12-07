@@ -109,6 +109,9 @@ static Arguments parse_arguments(int argc, char** argv) {
 				"  --client                      <default>\n"
 				"  --server                      run server\n"
 				"  --coordinator                 run coordinator\n"
+#ifdef _WIN32
+				"  --directx11, --dx11           [client] use the directx 11 renderer\n"
+#endif
 				"  --host <address>              [client] address of the coordinator\n"
 				"  --port <1-65535>              [client] port of the coordinator\n"
 				"                                [server/coordinator] port to listen on\n"
