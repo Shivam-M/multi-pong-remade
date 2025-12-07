@@ -20,7 +20,7 @@ class Server {
         socket_t server_socket;
 
         multi_pong::Tokens generate_tokens();
-
+        std::string generate_random_sequence();
         void listen();
         void handle_query(const sockaddr_in& address);
         void handle_prepare(const multi_pong::Prepare& prepare, const sockaddr_in& address);

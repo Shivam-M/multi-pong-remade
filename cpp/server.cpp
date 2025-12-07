@@ -3,6 +3,8 @@
 
 #include <thread>
 #include <cstdlib>
+#include <string>
+#include <random>
 
 using namespace multi_pong;
 
@@ -52,13 +54,29 @@ Server::~Server() {
 #endif
 }
 
+std::string Server::generate_random_sequence() {
+    static const int SEQUENCE_LENGTH = 32;
+    static const char CHARACTERS[] = "0123456789abcdef";
+
+    static thread_local std::mt19937 rng(std::random_device{}());
+    static thread_local std::uniform_int_distribution<std::size_t> dist(0, sizeof(CHARACTERS) - 2);
+
+    std::string sequence;
+    sequence.reserve(SEQUENCE_LENGTH);
+
+    for (int i = 0; i < SEQUENCE_LENGTH; i++) {
+        sequence += CHARACTERS[dist(rng)];
+    }
+    return sequence;
+}
+
 Tokens Server::generate_tokens() {
     Tokens tokens;
-    tokens.set_token_1(std::to_string(std::rand()));
-    tokens.set_token_2(std::to_string(std::rand()));
+    tokens.set_token_1(generate_random_sequence());
+    tokens.set_token_2(generate_random_sequence());
 
     while (tokens.token_2() == tokens.token_1()) {
-        tokens.set_token_2(std::to_string(std::rand()));
+        tokens.set_token_2(generate_random_sequence());
     }
 
     Logger::info("Generated tokens ", tokens.token_1(), " / ", tokens.token_2());
