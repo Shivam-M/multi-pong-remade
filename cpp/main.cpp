@@ -26,7 +26,7 @@ struct Arguments {
 	std::optional<int> port;
 	std::optional<std::string> host;
 	std::vector<std::pair<std::string, int>> server_addresses;
-	Logger::Level log_level = Logger::Level::Debug;
+	Logger::Level log_level = Logger::Level::Info;
 };
 
 static std::optional<std::pair<std::string, int>> parse_address(const std::string& address) {

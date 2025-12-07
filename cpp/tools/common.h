@@ -36,7 +36,7 @@ inline constexpr int MULTI_PONG_SERVER_PORT = 5001;
 inline constexpr int MULTI_PONG_SERVER_BUFFER = 512;
 inline constexpr int MULTI_PONG_SERVER_CHECK_INTERVAL = 5;
 inline constexpr int MULTI_PONG_SERVER_CHECK_TIMEOUT = 1;
-inline constexpr int MULTI_PONG_SERVER_UPDATE_RATE = 1000 / 128;
+inline constexpr int MULTI_PONG_SERVER_UPDATE_RATE = 1000000 / 128;  // nanoseconds
 inline const std::pair<std::string, int> MULTI_PONG_COORDINATOR_ADDRESS = { "127.0.0.1", 4999 };
 
 inline void close_socket(socket_t socket_) {

@@ -196,6 +196,10 @@ void Server::game_loop() {
     
     reset_ball();
 
+#ifdef _WIN32
+    timeBeginPeriod(1);
+#endif
+
     while (status.phase() == Status::STARTED) {
         
         ball->set_x(ball->x() + ball_velocity[0]);
@@ -236,8 +240,12 @@ void Server::game_loop() {
         state.set_frame(state.frame() + 1);
         send_state_to_all_players();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000 / 128));
+        std::this_thread::sleep_for(std::chrono::microseconds(MULTI_PONG_SERVER_UPDATE_RATE));
     }
+
+#ifdef _WIN32
+    timeEndPeriod(1);
+#endif
 }
 
 void Server::reset_ball() {
