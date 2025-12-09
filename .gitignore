@@ -16,3 +16,7 @@ CMakeSettings.json
 
 vcpkg_installed/
 vcpkg-configuration.json
+
+rust/target/*
+rust/src/protobufs/*
+!rust/src/protobufs/mod.rs
