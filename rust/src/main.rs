@@ -1,11 +1,21 @@
 mod protobufs;
+mod coordinator;
 
-use protobufs::multi_pong::{Message, Query};
-use crate::protobufs::multi_pong::message;
+use coordinator::Coordinator;
+use std::{sync::Arc, vec};
 
 fn main() {
-    let query = Query {};
-    let query_message: Message = Message { content: Some(message::Content::Query(query)) };
+    let port = 4999;
+    // let addresses: Vec<(String, u16)> = Vec::new();
 
-    println!("Query message: {:?}", query_message);
+    let addresses = vec![
+        ("127.0.0.1".to_string(), 5000),
+        ("127.0.0.1".to_string(), 5001),
+        ("127.0.0.1".to_string(), 5002),
+        ("127.0.0.1".to_string(), 5003),
+        ("127.0.0.1".to_string(), 5004)
+    ];
+
+    let coordinator = Arc::new(Coordinator::new(port, addresses).unwrap());
+    coordinator.init();
 }
