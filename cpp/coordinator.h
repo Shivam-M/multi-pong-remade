@@ -17,12 +17,12 @@ class Coordinator {
         std::string secret = "";
         std::vector<socket_t> clients;
         std::deque<socket_t> searching_clients;
-        std::map<std::pair<std::string, int>, int> server_list = {
-            { {"127.0.0.1", 5000}, -1 },
-            { {"127.0.0.1", 5001}, -1 },
-            { {"127.0.0.1", 5002}, -1 },
-            { {"127.0.0.1", 5003}, -1 },
-            { {"127.0.0.1", 5004}, -1 },
+        std::map<std::pair<std::string, int>, multi_pong::Status_Phase> server_list = {
+            { {"127.0.0.1", 5000}, multi_pong::Status_Phase::Status_Phase_UNKNOWN },
+            { {"127.0.0.1", 5001}, multi_pong::Status_Phase::Status_Phase_UNKNOWN },
+            { {"127.0.0.1", 5002}, multi_pong::Status_Phase::Status_Phase_UNKNOWN },
+            { {"127.0.0.1", 5003}, multi_pong::Status_Phase::Status_Phase_UNKNOWN },
+            { {"127.0.0.1", 5004}, multi_pong::Status_Phase::Status_Phase_UNKNOWN },
         };
 
         void listen_clients();

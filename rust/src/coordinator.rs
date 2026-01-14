@@ -17,16 +17,16 @@ pub struct Coordinator {
     secret: String,
     clients: Vec<TcpStream>,
     searching_clients: VecDeque<TcpStream>,
-    server_list: HashMap<(String, u16), i32>,
+    server_list: HashMap<(String, i16), Phase>,
 }
 
 impl Coordinator {
-    pub fn new(port: u16, addresses: Vec<(String, u16)>) -> std::io::Result<Self> {
+    pub fn new(port: u16, addresses: Vec<(String, i16)>) -> std::io::Result<Self> {
         let coordinator_socket = TcpListener::bind(("0.0.0.0", port))?;
 
-        let mut server_list: HashMap<(String, u16), i32> = HashMap::new();
+        let mut server_list: HashMap<(String, i16), Phase> = HashMap::new();
         for address in addresses {
-            server_list.insert(address, -1);
+            server_list.insert(address, Phase::Unknown);
         }
 
         Ok(Self {
@@ -63,7 +63,7 @@ impl Coordinator {
         }
     }
 
-    fn send_message_to_server(&self, (host, port): (String, u16), message: &Message) -> Option<Message> {
+    fn send_message_to_server(&self, (host, port): (String, i16), message: &Message) -> Option<Message> {
         let server_socket = UdpSocket::bind("0.0.0.0:0").unwrap();
 
         let mut message_buffer = Vec::new();
@@ -97,7 +97,6 @@ impl Coordinator {
                 } else {
                     println!("Server {host}:{port} is busy");
                 }
-                // maybe make new enum for "Unknown" phase instead of using -1
                 // self.server_list[(host, port)] = status.phase();
             }
             Some(message::Content::Tokens(tokens)) => {

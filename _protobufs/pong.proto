@@ -45,9 +45,10 @@ message Query {}
 
 message Status {
     enum Phase {
-        WAITING = 0;
-        PREPARING = 1;
-        STARTED = 2;
+        UNKNOWN = 0;
+        WAITING = 1;
+        PREPARING = 2;
+        STARTED = 3;
     }
 
     required Phase phase = 1;

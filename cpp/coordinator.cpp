@@ -18,7 +18,7 @@ Coordinator::Coordinator(int coordinator_port, std::vector<std::pair<std::string
 #endif
 
     for (auto& server : servers) {
-        server_list[server] = -1;
+        server_list[server] = multi_pong::Status_Phase::Status_Phase_UNKNOWN;
     }
 
     std::thread status_thread(&Coordinator::check_status, this);

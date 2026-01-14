@@ -21,11 +21,11 @@ class Coordinator:
         self.clients = [self.socket]
         self.searching_clients = []
         self.server_list = {
-            ("127.0.0.1", 5000): -1,
-            ("127.0.0.1", 5001): -1,
-            ("127.0.0.1", 5002): -1,
-            ("127.0.0.1", 5003): -1,
-            ("127.0.0.1", 5004): -1,
+            ("127.0.0.1", 5000): Status.Phase.UNKNOWN,
+            ("127.0.0.1", 5001): Status.Phase.UNKNOWN,
+            ("127.0.0.1", 5002): Status.Phase.UNKNOWN,
+            ("127.0.0.1", 5003): Status.Phase.UNKNOWN,
+            ("127.0.0.1", 5004): Status.Phase.UNKNOWN,
         }
 
         Thread(target=self.check_status).start()
@@ -70,7 +70,7 @@ class Coordinator:
                     self.logger.warning("Invalid message type %s from %s:%s", content, *server)
 
         except Exception:
-            self.server_list[server] = -1
+            self.server_list[server] = Status.Phase.UNKNOWN
             self.logger.info("Server %s:%s is unresponsive", *server)
 
         finally:
