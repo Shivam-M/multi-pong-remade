@@ -1,0 +1,48 @@
+name: Build Rust Windows
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'rust/**'
+      - '_protobufs/**'
+      - '.github/workflows/**-rust-**'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'rust/**'
+      - '_protobufs/**'
+      - '.github/workflows/**-rust-**'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        id: cargo-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target/release/deps
+            rust/target/debug/deps
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+
+      - name: Install protobuf compiler
+        run: |
+          choco install protoc
+          protoc --version
+
+      - name: Build (Release)
+        working-directory: rust
+        run: cargo build --release
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-rust-release
+          path: |
+            rust/target/release/**.exe
