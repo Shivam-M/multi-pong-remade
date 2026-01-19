@@ -1,7 +1,7 @@
 use std::net::{TcpListener, TcpStream, SocketAddr, UdpSocket};
 use std::collections::{HashMap, VecDeque};
 use std::{thread, time};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use prost::Message as ProstMessage;
 
@@ -17,7 +17,7 @@ pub struct Coordinator {
     secret: String,
     clients: Vec<TcpStream>,
     searching_clients: VecDeque<TcpStream>,
-    server_list: HashMap<(String, i16), Phase>,
+    server_list: Mutex<HashMap<(String, i16), Phase>>,
 }
 
 impl Coordinator {
@@ -35,7 +35,7 @@ impl Coordinator {
             secret: String::from(""),
             clients: Vec::new(),
             searching_clients: VecDeque::new(),
-            server_list,
+            server_list: Mutex::new(server_list),
         })
     }
 
@@ -56,9 +56,11 @@ impl Coordinator {
             thread::sleep(time::Duration::from_secs(MULTI_PONG_SERVER_CHECK_INTERVAL));
 
             // println!("begin search");
-
-            for address in self.server_list.keys() {
-                self.send_message_to_server(address.clone(), &query_message);
+            
+            let server_list = self.server_list.lock().unwrap();
+            let addresses: Vec<(String, i16)> = server_list.keys().cloned().collect();
+            for address in addresses {
+                self.send_message_to_server(address, &query_message);
             }
         }
     }
@@ -97,7 +99,8 @@ impl Coordinator {
                 } else {
                     println!("Server {host}:{port} is busy");
                 }
-                // self.server_list[(host, port)] = status.phase();
+                let mut server_list = self.server_list.lock().unwrap();
+                server_list.insert((host, port), status.phase());
             }
             Some(message::Content::Tokens(tokens)) => {
                 println!("Got tokens {:?}", tokens);
