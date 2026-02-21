@@ -1,5 +1,8 @@
 package multi_pong;
 
+option java_package = "com.sm.protobufs";
+option java_outer_classname = "Pong";
+
 enum Direction {
     STOP = 0;
     UP = 1;
