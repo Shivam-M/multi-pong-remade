@@ -6,8 +6,11 @@ import com.sm.protobufs.Pong.*;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -22,11 +25,10 @@ public class Coordinator {
 
     record ServerAddress(String host, int port) {}
 
-    ServerSocket socket;
+    Selector coordinatorSelector;
     DatagramSocket serverSocket;
     String secret = "";
-    ArrayList<Socket> clients = new ArrayList<>();
-    ArrayList<Socket> searchingClients = new ArrayList<>();
+    Deque<SocketChannel> searchingClients = new ArrayDeque<>();
     HashMap<ServerAddress, Status.Phase> serverList = new HashMap<>();
     HashMap<String, InetAddress> cachedHosts = new HashMap<>();
 
@@ -38,17 +40,97 @@ public class Coordinator {
         serverList.put(new ServerAddress("127.0.0.1", 5004), Status.Phase.UNKNOWN);
 
         try {
-            socket = new ServerSocket(MULTI_PONG_COORDINATOR_PORT);
+            coordinatorSelector = Selector.open();
+            ServerSocketChannel serverChannel = ServerSocketChannel.open();
+            serverChannel.bind(new InetSocketAddress(MULTI_PONG_COORDINATOR_PORT));
+            serverChannel.configureBlocking(false);
+            serverChannel.register(coordinatorSelector, SelectionKey.OP_ACCEPT);
+
+            logger.debug("Bound coordinator server channel to port {}", MULTI_PONG_COORDINATOR_PORT);
+
             serverSocket = new DatagramSocket();
-            serverSocket.setSoTimeout(1000);
+            serverSocket.setSoTimeout(MULTI_PONG_SERVER_CHECK_TIMEOUT * 1000);
         } catch (IOException e) {
             logger.error("Error during socket creation: ", e);
             return;
         }
 
         new Thread(this::checkStatus).start();  // maybe use something else like tasks/ExecutorService
+        new Thread(this::listen).start();
 
         while (true);
+    }
+
+    void listen() {
+        logger.info("Started listening on 0.0.0.0:{}...", MULTI_PONG_COORDINATOR_PORT);
+
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                coordinatorSelector.select();
+                Iterator<SelectionKey> keys = coordinatorSelector.selectedKeys().iterator();
+
+                while (keys.hasNext()) {
+                    SelectionKey key = keys.next();
+                    keys.remove();
+
+                    try {
+                        if (key.isAcceptable()) {
+                            ServerSocketChannel server = (ServerSocketChannel) key.channel();
+                            SocketChannel client = server.accept();
+                            InetSocketAddress address = (InetSocketAddress) client.getRemoteAddress();
+
+                            client.configureBlocking(false);
+                            client.register(coordinatorSelector, SelectionKey.OP_READ);
+
+                            logger.info("Client {}:{} connected", address.getAddress().getHostAddress(), address.getPort());
+                        } else if (key.isReadable()) {
+                            SocketChannel client = (SocketChannel) key.channel();
+                            ByteBuffer buffer = ByteBuffer.allocate(MULTI_PONG_SERVER_BUFFER);
+                            InetSocketAddress address = (InetSocketAddress) client.getRemoteAddress();
+                            int bytesRead = client.read(buffer);
+
+                            if (bytesRead == -1) {
+                                handleDisconnection(key);
+                                continue;
+                            }
+
+                            if (bytesRead == 0) continue;
+
+                            // need to deal with multiple packets across all languages: Message.parseDelimitedFrom()?
+                            Message message = Message.parseFrom(buffer.flip());
+                            logger.info("{}", message);
+
+                            if (message.hasSearch()) {
+                                if (!searchingClients.contains(client)) {
+                                    searchingClients.add(client);
+                                    logger.info("Add client {}:{} as a searching player", address.getAddress().getHostAddress(), address.getPort());
+                                }
+                            } else {
+                                logger.warn("Invalid message type received from client {}:{}", address.getAddress().getHostAddress(), address.getPort());
+                            }
+                        }
+                    } catch (IOException e) {
+                        handleDisconnection(key);
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Exception whilst listening for clients: ", e);
+            }
+        }
+    }
+
+    void handleDisconnection(SelectionKey key) {
+        try {
+            SocketChannel client = (SocketChannel) key.channel();
+            InetSocketAddress address = (InetSocketAddress) client.getRemoteAddress();
+
+            key.cancel();
+            client.close();
+
+            logger.info("Client {}:{} disconnected", address.getAddress().getHostAddress(), address.getPort());
+        } catch (IOException e) {
+            logger.error("Error while handling a client disconnection: ", e);
+        }
     }
 
     void checkStatus() {
@@ -77,6 +159,8 @@ public class Coordinator {
                     }
                 }
 
+                matchmake();
+
                 try {
                     TimeUnit.SECONDS.sleep(MULTI_PONG_SERVER_CHECK_INTERVAL);
                 } catch (InterruptedException ie) {
@@ -86,6 +170,61 @@ public class Coordinator {
             }
         } catch (SocketException e) {
             logger.error("Error creating a socket for query requests", e);
+        }
+    }
+
+    void matchmake() {
+        if (searchingClients.size() < 2) return;
+
+        Map.Entry<ServerAddress, Tokens> preparedServer = getPreparedServer();
+
+        if (preparedServer == null) return;
+
+        ServerAddress serverAddress = preparedServer.getKey();
+        Tokens serverTokens = preparedServer.getValue();
+
+        Player.Identifier[] players = {Player.Identifier.PLAYER_1, Player.Identifier.PLAYER_2};
+        String[] tokens = {serverTokens.getToken1(), serverTokens.getToken2()};
+
+        for (int i = 0; i < 2; i++) {
+            Player player = Player.newBuilder()
+                    .setPaddleDirection(Direction.STOP)
+                    .setPaddleLocation(0.0f)
+                    .setScore(0)
+                    .setIdentifier(players[i]).build();
+
+            Match match = Match.newBuilder()
+                    .setHost(serverAddress.host())
+                    .setPort(serverAddress.port())
+                    .setToken(tokens[i])
+                    .setPlayer(player)
+                    .build();
+
+            sendMessageToClient(searchingClients.pop(), Message.newBuilder().setMatch(match).build());
+        }
+    }
+
+    Map.Entry<ServerAddress, Tokens> getPreparedServer() {
+        Message prepareMessage = Message.newBuilder().setPrepare(Prepare.newBuilder().setSecret(secret)).build();
+
+        for (Map.Entry<ServerAddress, Status.Phase> server: serverList.entrySet()) {
+            if (server.getValue().equals(Status.Phase.WAITING)) {
+                Message tokensMessage = sendMessageToServer(server.getKey(), prepareMessage, serverSocket);
+
+                if (tokensMessage == null || !tokensMessage.hasTokens()) continue;
+
+                return Map.entry(server.getKey(), tokensMessage.getTokens());
+            }
+        }
+        return null;
+    }
+
+    void sendMessageToClient(SocketChannel socketChannel, Message message) {
+        try {
+            ByteBuffer buffer = ByteBuffer.wrap(message.toByteArray());
+            socketChannel.write(buffer);
+        } catch (IOException e) {
+            logger.error("Error sending message {} to client {}", message, socketChannel, e);
         }
     }
 
