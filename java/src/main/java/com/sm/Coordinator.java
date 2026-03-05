@@ -23,14 +23,14 @@ public class Coordinator {
 
     private static final Logger logger = LoggerFactory.getLogger(Coordinator.class);
 
-    record ServerAddress(String host, int port) {}
+    private record ServerAddress(String host, int port) {}
 
-    Selector coordinatorSelector;
-    DatagramSocket serverSocket;
-    String secret = "";
-    Deque<SocketChannel> searchingClients = new ArrayDeque<>();
-    HashMap<ServerAddress, Status.Phase> serverList = new HashMap<>();
-    HashMap<String, InetAddress> cachedHosts = new HashMap<>();
+    private Selector coordinatorSelector;
+    private DatagramSocket serverSocket;
+    private String secret = "";
+    private final Deque<SocketChannel> searchingClients = new ArrayDeque<>();
+    private final HashMap<ServerAddress, Status.Phase> serverList = new HashMap<>();
+    private final HashMap<String, InetAddress> cachedHosts = new HashMap<>();
 
     public Coordinator() {
         serverList.put(new ServerAddress("127.0.0.1", 5000), Status.Phase.UNKNOWN);
@@ -56,9 +56,12 @@ public class Coordinator {
         }
 
         new Thread(this::checkStatus).start();  // maybe use something else like tasks/ExecutorService
-        new Thread(this::listen).start();
 
-        while (true);
+        try {
+            new Thread(this::listen).join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     void listen() {
