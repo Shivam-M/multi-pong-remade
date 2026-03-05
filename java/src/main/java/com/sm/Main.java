@@ -8,7 +8,8 @@ public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) {
-        Coordinator coordinator = new Coordinator();
+        // Coordinator coordinator = new Coordinator();
+        Server server = new Server();
     }
 
 }
