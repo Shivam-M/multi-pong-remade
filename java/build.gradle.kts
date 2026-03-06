@@ -1,12 +1,18 @@
 plugins {
     id("java")
     id("com.google.protobuf") version "0.9.4"
+    id("org.openjfx.javafxplugin") version "0.1.0"
 }
 
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:4.28.2"
     }
+}
+
+javafx {
+    version = "21"
+    modules = listOf("javafx.controls")
 }
 
 sourceSets {
