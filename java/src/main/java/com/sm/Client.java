@@ -16,30 +16,23 @@ public class Client {
 
     private static final Logger logger = LoggerFactory.getLogger(Client.class);
 
-    private final Renderer renderer;
     private final DatagramSocket serverSocket;
     private final InetSocketAddress coordinatorAddress;
     private InetSocketAddress serverAddress;
     private Socket coordinatorSocket;
     private DataOutputStream coordinatorOutputStream;
     private DataInputStream coordinatorInputStream;
+    private Thread listenServerThread;
+    private Renderer renderer;
+    private String token;
 
     public volatile State state;
-    private String token;
 
     public Client(InetSocketAddress coordinator, Class<? extends Renderer> rendererClass) {
         try {
             serverSocket = new DatagramSocket();
         } catch (IOException e) {
             logger.error("Failed to create a server socket", e);
-            throw new RuntimeException(e);
-        }
-
-        try {
-            renderer = rendererClass.getDeclaredConstructor(Client.class).newInstance(this);
-            renderer.setup();
-        } catch (Exception e) {
-            logger.error("Failed to initialise {} renderer", rendererClass);
             throw new RuntimeException(e);
         }
 
@@ -63,7 +56,17 @@ public class Client {
         } catch (IOException e) {
             logger.error("Failed to connect to the game coordinator at {}", coordinatorAddress);
             logger.trace("Exception connecting to the game coordinator: ", e);
+            cleanup();
             return;
+        }
+
+        try {
+            renderer = rendererClass.getDeclaredConstructor(Client.class).newInstance(this);
+            renderer.setup();
+        } catch (Exception e) {
+            logger.error("Failed to initialise {} renderer", rendererClass);
+            cleanup();
+            throw new RuntimeException(e);
         }
 
         new Thread(renderer::renderLoop).start();
@@ -79,7 +82,7 @@ public class Client {
             logger.trace("Exception in coordinator listener thread", e);
         }
 
-        renderer.cleanup();
+        cleanup();
     }
 
     void connectCoordinator() throws IOException {
@@ -126,7 +129,8 @@ public class Client {
         token = match.getToken();
         serverAddress = new InetSocketAddress(match.getHost(), match.getPort());
 
-        new Thread(this::listenServer).start();
+        listenServerThread = new Thread(this::listenServer);
+        listenServerThread.start();
 
         sendMessageToServer(Message.newBuilder().setJoin(Join.newBuilder().setToken(token).build()).build());
     }
@@ -168,6 +172,17 @@ public class Client {
             serverSocket.send(messagePacket);
         } catch (IOException e) {
             logger.error("Error sending message {} to {}", message, serverAddress);
+        }
+    }
+
+    void cleanup() {
+        if (serverSocket != null) serverSocket.close();
+        if (listenServerThread != null) listenServerThread.interrupt();
+        if (renderer != null) renderer.cleanup();
+        try {
+            if (coordinatorSocket != null) coordinatorSocket.close();
+        } catch (IOException e) {
+            logger.trace("Exception during cleanup while closing the coordinator", e);
         }
     }
 
