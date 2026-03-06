@@ -2,6 +2,7 @@ package com.sm;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.sm.protobufs.Pong.*;
+import com.sm.render.Renderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +16,7 @@ public class Client {
 
     private static final Logger logger = LoggerFactory.getLogger(Client.class);
 
+    private final Renderer renderer;
     private final DatagramSocket serverSocket;
     private final InetSocketAddress coordinatorAddress;
     private InetSocketAddress serverAddress;
@@ -25,11 +27,19 @@ public class Client {
     public volatile State state;
     private String token;
 
-    public Client(InetSocketAddress coordinator) {
+    public Client(InetSocketAddress coordinator, Class<? extends Renderer> rendererClass) {
         try {
             serverSocket = new DatagramSocket();
         } catch (IOException e) {
             logger.error("Failed to create a server socket", e);
+            throw new RuntimeException(e);
+        }
+
+        try {
+            renderer = rendererClass.getDeclaredConstructor(Client.class).newInstance(this);
+            renderer.setup();
+        } catch (Exception e) {
+            logger.error("Failed to initialise {} renderer", rendererClass);
             throw new RuntimeException(e);
         }
 
@@ -56,6 +66,8 @@ public class Client {
             return;
         }
 
+        new Thread(renderer::renderLoop).start();
+
         Thread listenCoordinatorThread = new Thread(this::listenCoordinator);
         listenCoordinatorThread.start();
 
@@ -64,8 +76,10 @@ public class Client {
         try {
             listenCoordinatorThread.join();
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            logger.trace("Exception in coordinator listener thread", e);
         }
+
+        renderer.cleanup();
     }
 
     void connectCoordinator() throws IOException {
@@ -129,6 +143,7 @@ public class Client {
                 if (message.hasState()) {
                     if (message.getState().getToken().equals(token)) {
                         state = message.getState();
+                        renderer.updateState(state);
                     } else {
                         logger.warn("Received a game state message with an invalid token");
                     }
@@ -154,5 +169,12 @@ public class Client {
         } catch (IOException e) {
             logger.error("Error sending message {} to {}", message, serverAddress);
         }
+    }
+
+    public void sendMovement(Direction direction) {
+        if (serverAddress == null) return;
+
+        Movement movement = Movement.newBuilder().setDirection(direction).setToken(token).build();
+        sendMessageToServer(Message.newBuilder().setMovement(movement).build());
     }
 }
