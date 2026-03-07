@@ -2,6 +2,13 @@ plugins {
     id("java")
     id("com.google.protobuf") version "0.9.4"
     id("org.openjfx.javafxplugin") version "0.1.0"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
 }
 
 protobuf {
@@ -13,6 +20,24 @@ protobuf {
 javafx {
     version = "21"
     modules = listOf("javafx.controls")
+}
+
+tasks.jar {
+    manifest {
+        attributes(
+            mapOf("Main-Class" to "com.sm.Main")
+        )
+    }
+}
+
+tasks.shadowJar {
+    archiveClassifier.set("")
+    archiveVersion.set("")
+    manifest {
+        attributes(
+            mapOf("Main-Class" to "com.sm.Main")
+        )
+    }
 }
 
 sourceSets {

@@ -28,7 +28,7 @@ public class Client {
 
     public volatile State state;
 
-    public Client(InetSocketAddress coordinator, Class<? extends Renderer> rendererClass) {
+    public Client(InetSocketAddress coordinatorAddress, Class<? extends Renderer> rendererClass) {
         try {
             serverSocket = new DatagramSocket();
         } catch (IOException e) {
@@ -49,12 +49,12 @@ public class Client {
                 .setToken("")
                 .build();
 
-        coordinatorAddress = coordinator;
+        this.coordinatorAddress = coordinatorAddress;
 
         try {
             connectCoordinator();
         } catch (IOException e) {
-            logger.error("Failed to connect to the game coordinator at {}", coordinatorAddress);
+            logger.error("Failed to connect to the game coordinator at {}", this.coordinatorAddress);
             logger.trace("Exception connecting to the game coordinator: ", e);
             cleanup();
             return;
@@ -117,7 +117,7 @@ public class Client {
 
     void sendMessageToCoordinator(Message message) {
         try {
-            logger.debug("Sending {} to the coordinator...", message);
+            logger.debug("Sending {} to the coordinator...", message.getContentCase());
             message.writeTo(coordinatorOutputStream);
             coordinatorOutputStream.flush();
         } catch (IOException e) {

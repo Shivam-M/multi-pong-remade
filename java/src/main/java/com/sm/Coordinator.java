@@ -28,25 +28,33 @@ public class Coordinator {
     private Selector coordinatorSelector;
     private DatagramSocket serverSocket;
     private String secret = "";
+    private Thread listenThread;
+    private final int port;
     private final Deque<SocketChannel> searchingClients = new ArrayDeque<>();
-    private final HashMap<ServerAddress, Status.Phase> serverList = new HashMap<>();
+    private final HashMap<InetSocketAddress, Status.Phase> serverList = new HashMap<>();
     private final HashMap<String, InetAddress> cachedHosts = new HashMap<>();
 
-    public Coordinator() {
-        serverList.put(new ServerAddress("127.0.0.1", 5000), Status.Phase.UNKNOWN);
-        serverList.put(new ServerAddress("127.0.0.1", 5001), Status.Phase.UNKNOWN);
-        serverList.put(new ServerAddress("127.0.0.1", 5002), Status.Phase.UNKNOWN);
-        serverList.put(new ServerAddress("127.0.0.1", 5003), Status.Phase.UNKNOWN);
-        serverList.put(new ServerAddress("127.0.0.1", 5004), Status.Phase.UNKNOWN);
+    public Coordinator(int port, ArrayList<InetSocketAddress> serverAddresses) {
+        serverList.put(new InetSocketAddress("127.0.0.1", 5000), Status.Phase.UNKNOWN);
+        serverList.put(new InetSocketAddress("127.0.0.1", 5001), Status.Phase.UNKNOWN);
+        serverList.put(new InetSocketAddress("127.0.0.1", 5002), Status.Phase.UNKNOWN);
+        serverList.put(new InetSocketAddress("127.0.0.1", 5003), Status.Phase.UNKNOWN);
+        serverList.put(new InetSocketAddress("127.0.0.1", 5004), Status.Phase.UNKNOWN);
+
+        for (InetSocketAddress serverAddress: serverAddresses) {
+            serverList.put(serverAddress, Status.Phase.UNKNOWN);
+        }
+
+        this.port = port;
 
         try {
             coordinatorSelector = Selector.open();
             ServerSocketChannel serverChannel = ServerSocketChannel.open();
-            serverChannel.bind(new InetSocketAddress(MULTI_PONG_COORDINATOR_PORT));
+            serverChannel.bind(new InetSocketAddress(port));
             serverChannel.configureBlocking(false);
             serverChannel.register(coordinatorSelector, SelectionKey.OP_ACCEPT);
 
-            logger.debug("Bound coordinator server channel to port {}", MULTI_PONG_COORDINATOR_PORT);
+            logger.debug("Bound coordinator server channel to port {}", port);
 
             serverSocket = new DatagramSocket();
             serverSocket.setSoTimeout(MULTI_PONG_SERVER_CHECK_TIMEOUT * 1000);
@@ -58,14 +66,16 @@ public class Coordinator {
         new Thread(this::checkStatus).start();  // maybe use something else like tasks/ExecutorService
 
         try {
-            new Thread(this::listen).join();
+            listenThread = new Thread(this::listen);
+            listenThread.start();
+            listenThread.join();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
 
     void listen() {
-        logger.info("Started listening on 0.0.0.0:{}...", MULTI_PONG_COORDINATOR_PORT);
+        logger.info("Started listening on 0.0.0.0:{}...", port);
 
         while (!Thread.currentThread().isInterrupted()) {
             try {
@@ -85,7 +95,7 @@ public class Coordinator {
                             client.configureBlocking(false);
                             client.register(coordinatorSelector, SelectionKey.OP_READ);
 
-                            logger.info("Client {}:{} connected", address.getAddress().getHostAddress(), address.getPort());
+                            logger.info("Client {} connected", address);
                         } else if (key.isReadable()) {
                             SocketChannel client = (SocketChannel) key.channel();
                             ByteBuffer buffer = ByteBuffer.allocate(MULTI_PONG_SERVER_BUFFER);
@@ -106,10 +116,10 @@ public class Coordinator {
                             if (message.hasSearch()) {
                                 if (!searchingClients.contains(client)) {
                                     searchingClients.add(client);
-                                    logger.info("Add client {}:{} as a searching player", address.getAddress().getHostAddress(), address.getPort());
+                                    logger.info("Add client {} as a searching player", address);
                                 }
                             } else {
-                                logger.warn("Invalid message type received from client {}:{}", address.getAddress().getHostAddress(), address.getPort());
+                                logger.warn("Invalid message type received from client {}", address);
                             }
                         }
                     } catch (IOException e) {
@@ -130,7 +140,7 @@ public class Coordinator {
             key.cancel();
             client.close();
 
-            logger.info("Client {}:{} disconnected", address.getAddress().getHostAddress(), address.getPort());
+            logger.info("Client {} disconnected", address);
         } catch (IOException e) {
             logger.error("Error while handling a client disconnection: ", e);
         }
@@ -144,11 +154,11 @@ public class Coordinator {
             querySocket.setSoTimeout(MULTI_PONG_SERVER_CHECK_TIMEOUT * 1000);
 
             while (!Thread.currentThread().isInterrupted()) {
-                for (ServerAddress serverAddress : serverList.keySet()) {
+                for (InetSocketAddress serverAddress : serverList.keySet()) {
                     Message receivedMessage = sendPacketToServer(serverAddress, queryPacket, querySocket);
 
                     if (receivedMessage == null || !receivedMessage.hasStatus()) {
-                        logger.info("Server {}:{} is unresponsive", serverAddress.host, serverAddress.port);
+                        logger.info("Server {}:{} is unresponsive", serverAddress.getAddress(), serverAddress.getPort());
                         continue;
                     }
 
@@ -156,9 +166,9 @@ public class Coordinator {
                     serverList.put(serverAddress, status);
 
                     if (status.equals(Status.Phase.WAITING)) {
-                        logger.info("Server {}:{} is available", serverAddress.host, serverAddress.port);
+                        logger.info("Server {}:{} is available", serverAddress.getAddress(), serverAddress.getPort());
                     } else {
-                        logger.info("Server {}:{} is busy", serverAddress.host, serverAddress.port);
+                        logger.info("Server {}:{} is busy", serverAddress.getAddress(), serverAddress.getPort());
                     }
                 }
 
@@ -179,11 +189,11 @@ public class Coordinator {
     void matchmake() {
         if (searchingClients.size() < 2) return;
 
-        Map.Entry<ServerAddress, Tokens> preparedServer = getPreparedServer();
+        Map.Entry<InetSocketAddress, Tokens> preparedServer = getPreparedServer();
 
         if (preparedServer == null) return;
 
-        ServerAddress serverAddress = preparedServer.getKey();
+        InetSocketAddress serverAddress = preparedServer.getKey();
         Tokens serverTokens = preparedServer.getValue();
 
         Player.Identifier[] players = {Player.Identifier.PLAYER_1, Player.Identifier.PLAYER_2};
@@ -197,8 +207,8 @@ public class Coordinator {
                     .setIdentifier(players[i]).build();
 
             Match match = Match.newBuilder()
-                    .setHost(serverAddress.host())
-                    .setPort(serverAddress.port())
+                    .setHost(serverAddress.getAddress().getHostAddress())
+                    .setPort(serverAddress.getPort())
                     .setToken(tokens[i])
                     .setPlayer(player)
                     .build();
@@ -207,10 +217,10 @@ public class Coordinator {
         }
     }
 
-    Map.Entry<ServerAddress, Tokens> getPreparedServer() {
+    Map.Entry<InetSocketAddress, Tokens> getPreparedServer() {
         Message prepareMessage = Message.newBuilder().setPrepare(Prepare.newBuilder().setSecret(secret)).build();
 
-        for (Map.Entry<ServerAddress, Status.Phase> server: serverList.entrySet()) {
+        for (Map.Entry<InetSocketAddress, Status.Phase> server: serverList.entrySet()) {
             if (server.getValue().equals(Status.Phase.WAITING)) {
                 Message tokensMessage = sendMessageToServer(server.getKey(), prepareMessage, serverSocket);
 
@@ -231,40 +241,27 @@ public class Coordinator {
         }
     }
 
-    Message sendMessageToServer(ServerAddress serverAddress, Message message, DatagramSocket socket) {
+    Message sendMessageToServer(InetSocketAddress serverAddress, Message message, DatagramSocket socket) {
         DatagramPacket messagePacket = new DatagramPacket(message.toByteArray(), message.toByteArray().length);
         return sendPacketToServer(serverAddress, messagePacket, socket);
     }
 
-    Message sendPacketToServer(ServerAddress serverAddress, DatagramPacket packet, DatagramSocket socket) {
+    Message sendPacketToServer(InetSocketAddress serverAddress, DatagramPacket packet, DatagramSocket socket) {
         DatagramPacket responsePacket = new DatagramPacket(new byte[MULTI_PONG_SERVER_BUFFER], MULTI_PONG_SERVER_BUFFER);
 
         try {
-            packet.setAddress(resolveHostname(serverAddress.host));
-            packet.setPort(serverAddress.port);
+            packet.setAddress(serverAddress.getAddress());
+            packet.setPort(serverAddress.getPort());
             socket.send(packet);
             socket.receive(responsePacket);
             return Message.parseFrom(ByteBuffer.wrap(responsePacket.getData(),0, responsePacket.getLength()));
         } catch (InvalidProtocolBufferException e) {
-            logger.warn("Received malformed message from {}:{}", serverAddress.host, serverAddress.port, e);
-        } catch (UnknownHostException e) {
-            logger.error("Unable to resolve hostname {}", serverAddress.host, e);
+            logger.warn("Received malformed message from {}", serverAddress, e);
         } catch (IOException e) {
-            logger.trace("IO error while communicating with {}:{}", serverAddress.host, serverAddress.port, e);
+            logger.trace("IO error while communicating with {}", serverAddress, e);
         }
 
         return null;
-    }
-
-    InetAddress resolveHostname(String host) throws UnknownHostException {
-        InetAddress address = cachedHosts.get(host);
-
-        if (address == null) {
-            address = InetAddress.getByName(host);
-            cachedHosts.put(host, address);
-        }
-
-        return address;
     }
 
 }

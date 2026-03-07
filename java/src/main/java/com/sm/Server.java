@@ -32,11 +32,12 @@ public class Server {
     private final ConcurrentHashMap<Player.Identifier, Direction> playerDirections = new ConcurrentHashMap<>();
     private final float[] ballVelocity = new float[2];
 
-    public Server() {
+    public Server(int port) {
         try {
-            socket = new DatagramSocket(MULTI_PONG_SERVER_PORT);
+            socket = new DatagramSocket(port);
+            logger.info("Bound server socket to port {}", port);
         } catch (IOException e) {
-            logger.error("Failed to create/bind socket on port {}", MULTI_PONG_SERVER_PORT, e);
+            logger.error("Failed to create/bind socket on port {}", port, e);
         }
 
         generateTokens();
