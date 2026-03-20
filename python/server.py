@@ -26,10 +26,14 @@ class Server:
         self.tokens = self.generate_tokens()
         self.secret = getenv("MULTI_PONG_SECRET", None)
         self.ball_velocity = [0.0, 0.0]
-        self.state = State(ball=Ball(x=0.5, y=0.5), frame=0)
+        self.state = State(
+            ball=Ball(x=0.5, y=0.5),
+            player_1=Player(identifier=Player.Identifier.PLAYER_1, paddle_direction=Direction.STOP, paddle_location=0.5, score=0),
+            player_2=Player(identifier=Player.Identifier.PLAYER_2, paddle_direction=Direction.STOP, paddle_location=0.5, score=0),
+            frame=0
+        )
         self.status = Status(phase=Status.Phase.WAITING)
         self.clients = {}
-        self.token_addresses = {}
         self.socket = socket(AF_INET, SOCK_DGRAM)
         self.socket.bind(("0.0.0.0", MULTI_PONG_SERVER_PORT))
         self.listen()
@@ -98,8 +102,7 @@ class Server:
         if (player_id := self.get_player_id_from_token(join.token)) is None:
             return
 
-        self.token_addresses[join.token] = address
-        self.clients[join.token] = Player(identifier=player_id, paddle_direction=Direction.STOP, paddle_location=0.5, score=0)
+        self.clients[join.token] = address
         self.logger.info("Registered client %s:%s as player %d with token %s", *address, player_id, join.token)
 
         if len(self.clients) == 2:
@@ -114,7 +117,12 @@ class Server:
         if (player_id := self.get_player_id_from_token(token)) is None:
             return
 
-        self.clients[token].paddle_direction = movement.direction
+        # todo: should use a mutex here because game_loop reads player_direction and updates other player properties
+        if player_id == Player.Identifier.PLAYER_1:
+            self.state.player_1.paddle_direction = movement.direction
+        else:
+            self.state.player_2.paddle_direction = movement.direction
+
         self.logger.debug("Player %d sent movement direction %d", player_id, movement.direction)
 
     def get_player_id_from_token(self, token: str):
@@ -124,10 +132,7 @@ class Server:
         return Player.Identifier.PLAYER_1 if token == self.tokens.token_1 else Player.Identifier.PLAYER_2
 
     def get_token_from_player_id(self, player_id):
-        for token in self.clients:
-            if self.clients[token].identifier == player_id:
-                return token
-        return None
+        return self.tokens.token_1 if player_id == Player.Identifier.PLAYER_1 else self.tokens.token_2
 
     def start_match(self):
         self.logger.info("All players have joined - starting match")
@@ -146,27 +151,21 @@ class Server:
 
             if not (0 < self.state.ball.x < 1):
                 player_id = Player.Identifier.PLAYER_2 if self.state.ball.x < 0 else Player.Identifier.PLAYER_1
-                token = self.get_token_from_player_id(player_id)
-                self.clients[token].score += 1
-                self.logger.info("Player %d scored - current score: [%d - %d]", player_id, self.clients[self.tokens.token_1].score, self.clients[self.tokens.token_2].score)
+
+                if player_id == Player.Identifier.PLAYER_1:
+                    self.state.player_1.score += 1
+                else:
+                    self.state.player_2.score += 2
+
+                self.logger.info("Player %d scored - current score: [%d - %d]", player_id, self.state.player_1.score, self.state.player_2.score)
                 self.reset_ball()
 
-            for token in self.clients:
-                player = self.clients[token]
-
-                if player.paddle_direction == Direction.UP:
-                    player.paddle_location -= MULTI_PONG_PADDLE_SPEED
-                elif player.paddle_direction == Direction.DOWN:
-                    player.paddle_location += MULTI_PONG_PADDLE_SPEED
-
-                if player.paddle_location < 0:
-                    player.paddle_location = 0
-                elif player.paddle_location > 1:
-                    player.paddle_location = 1
+            self.update_paddle(self.state.player_1)
+            self.update_paddle(self.state.player_2)
             
             is_ball_moving_left = self.ball_velocity[0] <= 0
             paddle_x = MULTI_PONG_PADDLE_HORIZONTAL_PADDING if is_ball_moving_left else 1 - MULTI_PONG_PADDLE_HORIZONTAL_PADDING
-            paddle_y = self.clients[self.tokens.token_1 if is_ball_moving_left else self.tokens.token_2].paddle_location
+            paddle_y = (self.state.player_1 if is_ball_moving_left else self.state.player_2).paddle_location
 
             if (relative_hit := self.did_ball_hit_paddle(paddle_x, paddle_y)) is not None:
                 self.logger.debug("Ball hit paddle at relative Y %.2f", relative_hit)
@@ -180,8 +179,16 @@ class Server:
     def reset_ball(self):
         self.ball_velocity = [choice([-0.0025, 0.0025]), choice([-0.0025, 0.0025])]
         self.state.ball.x = 0.5
-        self.state.ball.y = 0.5 
-    
+        self.state.ball.y = 0.5
+
+    def update_paddle(self, player):
+        if player.paddle_direction == Direction.UP:
+            player.paddle_location -= MULTI_PONG_PADDLE_SPEED
+        elif player.paddle_direction == Direction.DOWN:
+            player.paddle_location += MULTI_PONG_PADDLE_SPEED
+
+        player.paddle_location = max(0, min(1, player.paddle_location))
+
     def did_ball_hit_paddle(self, paddle_x, paddle_y):
         ball = self.state.ball
 
@@ -202,11 +209,9 @@ class Server:
         return None
 
     def send_state_to_all_players(self):
-        self.state.player_1.CopyFrom(list(self.clients.values())[0])  # todo: refactor: store player data in state to avoid copying
-        self.state.player_2.CopyFrom(list(self.clients.values())[1])
-        for token in self.clients:
+        for (token, address) in self.clients.items():
             self.state.token = token
-            self.send(self.state, self.token_addresses[token])
+            self.send(self.state, address)
 
     def send(self, data, address):
         self.logger.debug("Sending %s to %s:%s", str(data).strip(), *address)
