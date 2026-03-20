@@ -177,10 +177,10 @@ public class Server {
                 resetBallVelocity();
                 stateBuilder.getBallBuilder().setX(0.5f).setY(0.5f);
                 logger.info("Score: [{} - {}]", stateBuilder.getPlayer1().getScore(), stateBuilder.getPlayer2().getScore());
-            } else {  // maybe base this off horizontal ball velocity instead
-                boolean isBallOnLeftSide = ball.getX() <= 0.5f;
-                float paddleX = isBallOnLeftSide ? MULTI_PONG_PADDLE_HORIZONTAL_PADDING : 1 - MULTI_PONG_PADDLE_HORIZONTAL_PADDING;
-                float paddleY = isBallOnLeftSide ? stateBuilder.getPlayer1().getPaddleLocation() : stateBuilder.getPlayer2().getPaddleLocation();
+            } else {
+                boolean isBallMovingLeft = ballVelocity[0] <= 0;
+                float paddleX = isBallMovingLeft ? MULTI_PONG_PADDLE_HORIZONTAL_PADDING : 1 - MULTI_PONG_PADDLE_HORIZONTAL_PADDING;
+                float paddleY = isBallMovingLeft ? stateBuilder.getPlayer1().getPaddleLocation() : stateBuilder.getPlayer2().getPaddleLocation();
                 Float paddleRelativeHit = getPaddleRelativeHit(paddleX, paddleY, ball);
 
                 if (paddleRelativeHit != null) {

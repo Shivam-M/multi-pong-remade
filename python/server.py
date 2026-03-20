@@ -164,9 +164,9 @@ class Server:
                 elif player.paddle_location > 1:
                     player.paddle_location = 1
             
-            is_ball_on_left_side = self.state.ball.x <= 0.5
-            paddle_x = MULTI_PONG_PADDLE_HORIZONTAL_PADDING if is_ball_on_left_side else 1 - MULTI_PONG_PADDLE_HORIZONTAL_PADDING
-            paddle_y = self.clients[self.tokens.token_1 if is_ball_on_left_side else self.tokens.token_2].paddle_location
+            is_ball_moving_left = self.ball_velocity[0] <= 0
+            paddle_x = MULTI_PONG_PADDLE_HORIZONTAL_PADDING if is_ball_moving_left else 1 - MULTI_PONG_PADDLE_HORIZONTAL_PADDING
+            paddle_y = self.clients[self.tokens.token_1 if is_ball_moving_left else self.tokens.token_2].paddle_location
 
             if (relative_hit := self.did_ball_hit_paddle(paddle_x, paddle_y)) is not None:
                 self.logger.debug("Ball hit paddle at relative Y %.2f", relative_hit)

@@ -247,9 +247,9 @@ void Server::game_loop() {
         }
 
         float relative_hit = 0.0f;
-        bool is_ball_on_left_side = ball->x() <= 0.5f;
-        float paddle_x = is_ball_on_left_side ? MULTI_PONG_PADDLE_HORIZONTAL_PADDING : 1 - MULTI_PONG_PADDLE_HORIZONTAL_PADDING;
-        float paddle_y = clients[is_ball_on_left_side ? tokens.token_1() : tokens.token_2()].paddle_location();
+        bool is_ball_moving_left = ball_velocity[0] < 0.0f;
+        float paddle_x = is_ball_moving_left ? MULTI_PONG_PADDLE_HORIZONTAL_PADDING : 1 - MULTI_PONG_PADDLE_HORIZONTAL_PADDING;
+        float paddle_y = clients[is_ball_moving_left ? tokens.token_1() : tokens.token_2()].paddle_location();
 
         if (did_ball_hit_paddle(paddle_x, paddle_y, relative_hit)) {
             ball_velocity[0] *= -1 - (MULTI_PONG_PADDLE_HIT_EDGE_FACTOR * abs(relative_hit - 0.5f));
